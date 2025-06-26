@@ -1,0 +1,37 @@
+[package]
+name = "lending_pool"
+version = "0.1.0"
+description = "Cross-chain DeFi lending and borrowing protocol on Solana"
+edition = "2021"
+license = "MIT"
+authors = ["Cross-Chain DeFi Team"]
+repository = "https://github.com/your-org/cross-chain-defi-protocol"
+keywords = ["solana", "defi", "lending", "cross-chain", "chainlink"]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "lending_pool"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+test-sbf = []
+
+[dependencies]
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
+chainlink-solana = { workspace = true }
+solana-program = { workspace = true }
+spl-token = { version = "4.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "2.0", features = ["no-entrypoint"] }
+borsh = "^0.10"
+thiserror = "1.0"
+
+[dev-dependencies]
+solana-sdk = "~1.16.0"
+solana-program-test = "~1.16.0"
+tokio = "1.0"
+assert_matches = "1.4"

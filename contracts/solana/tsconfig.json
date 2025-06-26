@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "types": ["mocha", "chai", "node"],
+    "typeRoots": ["./node_modules/@types"],
+    "lib": ["es2020", "dom"],
+    "module": "commonjs",
+    "target": "es2020",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "sourceMap": true,
+    "moduleResolution": "node"
+  },
+  "include": [
+    "tests/**/*",
+    "app/**/*",
+    "migrations/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "target"
+  ]
+} 

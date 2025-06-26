@@ -1,0 +1,67 @@
+{
+  "name": "cross-chain-lending-evm-contracts",
+  "version": "1.0.0",
+  "description": "Cross-chain lending and borrowing protocol smart contracts for EVM chains",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:sepolia": "npx hardhat run scripts/deploy.js --network sepolia",
+    "deploy:mumbai": "npx hardhat run scripts/deploy.js --network mumbai",
+    "verify:sepolia": "npx hardhat run scripts/verify.js --network sepolia",
+    "verify:mumbai": "npx hardhat run scripts/verify.js --network mumbai",
+    "setup:assets": "npx hardhat run scripts/setup-assets.js",
+    "setup:ccip": "npx hardhat run scripts/setup-ccip.js",
+    "clean": "npx hardhat clean",
+    "coverage": "npx hardhat coverage",
+    "gas-report": "REPORT_GAS=true npx hardhat test",
+    "lint": "solhint 'contracts/**/*.sol'",
+    "lint:fix": "solhint 'contracts/**/*.sol' --fix",
+    "size": "npx hardhat size-contracts"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.4.0",
+    "@openzeppelin/contracts": "^5.3.0",
+    "@openzeppelin/contracts-upgradeable": "^5.3.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.0",
+    "dotenv": "^16.6.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@typechain/hardhat": "^9.0.0",
+    "@typechain/ethers-v6": "^0.5.0",
+    "hardhat": "^2.22.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "hardhat-contract-sizer": "^2.10.0",
+    "solidity-coverage": "^0.8.5",
+    "solhint": "^5.0.0",
+    "chai": "^4.3.10",
+    "ethers": "^6.10.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/mocha": "^10.0.0"
+  },
+  "keywords": [
+    "defi",
+    "lending",
+    "borrowing",
+    "cross-chain",
+    "chainlink",
+    "ccip",
+    "ethereum",
+    "polygon",
+    "solidity"
+  ],
+  "author": "Cross-Chain DeFi Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/cross-chain-defi-protocol.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "name": "cross-chain-lending-solana",
+  "version": "1.0.0",
+  "description": "Cross-chain DeFi lending protocol - Solana implementation",
+  "main": "index.js",
+  "scripts": {
+    "build": "anchor build",
+    "build:fix": "./build-and-fix.sh",
+    "test": "anchor test",
+    "test:unit": "anchor test --skip-deploy",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "deploy:testnet": "anchor deploy --provider.cluster testnet",
+    "verify": "anchor verify",
+    "clean": "anchor clean",
+    "idl:init": "anchor idl init -f target/idl/lending_pool.json lending_pool",
+    "idl:upgrade": "anchor idl upgrade -f target/idl/lending_pool.json lending_pool",
+    "localnet": "solana-test-validator",
+    "logs": "solana logs",
+    "lint": "npx tsc --noEmit",
+    "lint:eslint": "eslint . --ext .ts,.js",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/web3.js": "^1.91.0",
+    "@solana/spl-token": "^0.4.0",
+    "borsh": "^0.7.0",
+    "bn.js": "^5.2.1",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "chai": "^4.3.10",
+    "eslint": "^8.50.0",
+    "mocha": "^10.0.0",
+    "prettier": "^3.0.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "solana",
+    "defi",
+    "lending",
+    "borrowing",
+    "cross-chain",
+    "chainlink",
+    "ccip",
+    "anchor"
+  ],
+  "author": "Cross-Chain DeFi Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/cross-chain-defi-protocol.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
