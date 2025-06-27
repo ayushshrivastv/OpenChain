@@ -6,8 +6,11 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
-    "deploy:sepolia": "npx hardhat run scripts/deploy.js --network sepolia",
-    "deploy:mumbai": "npx hardhat run scripts/deploy.js --network mumbai",
+    "deploy:sepolia": "npx hardhat run scripts/deploy-testnet.js --network sepolia",
+    "deploy:mumbai": "npx hardhat run scripts/deploy-testnet.js --network mumbai",
+    "check:sepolia": "npx hardhat run scripts/check-balance.js --network sepolia",
+    "check:mumbai": "npx hardhat run scripts/check-balance.js --network mumbai",
+    "update-frontend": "node scripts/update-frontend.js",
     "verify:sepolia": "npx hardhat run scripts/verify.js --network sepolia",
     "verify:mumbai": "npx hardhat run scripts/verify.js --network mumbai",
     "setup:assets": "npx hardhat run scripts/setup-assets.js",
