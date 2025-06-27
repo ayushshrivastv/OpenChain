@@ -5,7 +5,7 @@ export const wagmiConfig = getDefaultConfig({
   appName: 'CrossChain.io',
   projectId: 'crosschain-defi-protocol', // In production, use WalletConnect project ID
   chains: [sepoliaTestnet, polygonMumbai],
-  ssr: true, // Next.js SSR support
+  ssr: false, // Disable SSR to avoid indexedDB issues
 })
 
 // Real testnet contract addresses - deployed and verified

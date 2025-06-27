@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { WalletConnector } from '@/components/WalletConnector'
+import WalletConnector from '@/components/WalletConnector'
 import { TransactionModal } from '@/components/TransactionModal'
 import { useAccount, usePublicClient, useChainId } from 'wagmi'
 import { formatUnits } from '@/lib/contracts'

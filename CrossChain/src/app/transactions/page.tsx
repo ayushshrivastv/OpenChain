@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/card'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccount } from 'wagmi'
-import { WalletConnector } from '@/components/WalletConnector'
+import WalletConnector from '@/components/WalletConnector'
 import { formatUnits } from '@/lib/contracts'
 import dynamic from 'next/dynamic'
 
