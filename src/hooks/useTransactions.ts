@@ -218,17 +218,17 @@ export function useTransactions() {
         return receipt
       }
       
-      // Same-chain deposit
-      await writeContract({
-        address: contractAddresses.lendingPool as `0x${string}`,
-        abi: LENDING_POOL_ABI,
-        functionName: 'deposit',
-        args: [
-          contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
-          amountBigInt
-        ] as const,
-        // value: asset === 'ETH' ? amountBigInt : 0n
-      })
+        // Same-chain deposit
+        await writeContract({
+          address: contractAddresses.lendingPool as `0x${string}`,
+          abi: LENDING_POOL_ABI,
+          functionName: 'deposit',
+          args: [
+            contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
+            amountBigInt
+          ] as const,
+          // value: asset === 'ETH' ? amountBigInt : 0n
+        })
 
       toast.success('Deposit transaction submitted')
     } catch (err) {

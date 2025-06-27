@@ -47,7 +47,7 @@ function PositionsContentInner() {
 
     setLoading(true)
     try {
-      const contractAddresses = CONTRACT_ADDRESSES[chainId]
+      const contractAddresses = CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES]
       if (!contractAddresses) return
 
       // Get user position events from the lending pool
