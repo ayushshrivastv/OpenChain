@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/card'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccount } from 'wagmi'
-import WalletConnector from '@/components/WalletConnector'
+import { WalletConnector } from '@/components/WalletConnector'
 import { formatUnits } from '@/lib/contracts'
 import dynamic from 'next/dynamic'
 
@@ -56,9 +56,11 @@ function TransactionsContentInner() {
   const getExplorerUrl = (hash: string, chain: string) => {
     if (chain.includes('Sepolia')) {
       return `https://sepolia.etherscan.io/tx/${hash}`
-    } else if (chain.includes('Mumbai')) {
+    }
+    if (chain.includes('Mumbai')) {
       return `https://mumbai.polygonscan.com/tx/${hash}`
-    } else if (chain.includes('Solana')) {
+    }
+    if (chain.includes('Solana')) {
       return `https://explorer.solana.com/tx/${hash}?cluster=devnet`
     }
     return '#'

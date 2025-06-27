@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
-import { Providers } from "./providers";
+import ClientBody from "./ClientBody";
 import { Toaster } from '@/components/ui/sonner';
 import Link from 'next/link';
-import WalletConnector from '@/components/WalletConnector';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,24 +35,22 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body suppressHydrationWarning className="antialiased">
-        <Providers>
-          <div className="min-h-screen bg-black text-white flex flex-col">
-            <header className="h-16 w-full flex items-center justify-between px-6 border-b border-gray-800">
-              <div className="text-lg font-bold">Cross-Chain Lending Protocol</div>
-              <nav className="flex flex-1 justify-center gap-8">
-                {pages.map((p) => (
-                  <Link key={p.href} href={p.href} className="text-gray-400 hover:text-white px-2 py-1 transition-colors font-medium">
-                    {p.name}
-                  </Link>
-                ))}
-              </nav>
-              <WalletConnector />
-            </header>
-            <main className="flex-1 flex flex-col items-center px-4 py-8 w-full max-w-5xl mx-auto">
-              {children}
-            </main>
-          </div>
-        </Providers>
+        <div className="min-h-screen bg-black text-white flex flex-col">
+          <header className="h-16 w-full flex items-center justify-between px-6 border-b border-gray-800">
+            <div className="text-lg font-bold">Cross-Chain Lending Protocol</div>
+            <nav className="flex flex-1 justify-center gap-8">
+              {pages.map((p) => (
+                <Link key={p.href} href={p.href} className="text-gray-400 hover:text-white px-2 py-1 transition-colors font-medium">
+                  {p.name}
+                </Link>
+              ))}
+            </nav>
+            <div>{/* Wallet connect will go here */}</div>
+          </header>
+          <main className="flex-1 flex flex-col items-center px-4 py-8 w-full max-w-5xl mx-auto">
+            {children}
+          </main>
+        </div>
         <Toaster position="top-right" />
       </body>
     </html>

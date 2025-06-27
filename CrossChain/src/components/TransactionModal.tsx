@@ -50,7 +50,7 @@ export function TransactionModal({
       setIsCrossChain(false)
       setEstimatedFee(0n)
     }
-  }, [isOpen, type, chainId])
+  }, [isOpen, chainId])
 
   // Update cross-chain status when chains change
   useEffect(() => {
@@ -61,7 +61,7 @@ export function TransactionModal({
   useEffect(() => {
     if (isCrossChain && amount && (type === 'borrow' || type === 'deposit')) {
       // For now, use a fixed estimate - in production this would call the CCIP router
-      setEstimatedFee(BigInt(Math.floor(parseFloat('0.001') * 1e18))) // 0.001 ETH estimated fee
+      setEstimatedFee(BigInt(Math.floor(Number.parseFloat('0.001') * 1e18))) // 0.001 ETH estimated fee
     } else {
       setEstimatedFee(0n)
     }
@@ -87,15 +87,14 @@ export function TransactionModal({
           await borrow(
             asset, 
             amount, 
-            selectedSourceChain, 
-            isCrossChain ? selectedDestChain : undefined
+            isCrossChain ? selectedDestChain.toString() : undefined
           )
           break
         case 'repay':
-          await repay(asset, amount, selectedSourceChain)
+          await repay(asset, amount, selectedDestChain.toString())
           break
         case 'withdraw':
-          await withdraw(asset, amount, selectedSourceChain)
+          await withdraw(asset, amount, selectedDestChain.toString())
           break
         default:
           throw new Error('Unknown transaction type')
@@ -324,3 +323,4 @@ export function TransactionModal({
     </Dialog>
   )
 } 
+ 

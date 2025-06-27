@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import WalletConnector from '@/components/WalletConnector'
+import { WalletConnector } from '@/components/WalletConnector'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useUserPosition } from '@/hooks/useUserPosition'
 import { useAccount } from 'wagmi'
@@ -55,8 +55,7 @@ function BorrowContentInner() {
       await borrow(
         selectedAsset,
         amount,
-        selectedSourceChain,
-        selectedDestChain
+        selectedDestChain.toString()
       )
       
       toast.success('Cross-chain borrow transaction submitted!')

@@ -159,11 +159,10 @@ export function useUserPosition() {
       fetchUserPosition()
       const interval = setInterval(fetchUserPosition, 30000)
       return () => clearInterval(interval)
-    } else {
-      // Clear position when wallet disconnected
-      setPosition(null)
-      setPrices({})
     }
+    // Clear position when wallet disconnected
+    setPosition(null)
+    setPrices({})
   }, [address, fetchUserPosition])
 
   // Calculate position health status

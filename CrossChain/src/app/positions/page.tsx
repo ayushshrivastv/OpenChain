@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import WalletConnector from '@/components/WalletConnector'
+import { WalletConnector } from '@/components/WalletConnector'
 import { TransactionModal } from '@/components/TransactionModal'
 import { useAccount, usePublicClient, useChainId } from 'wagmi'
 import { formatUnits } from '@/lib/contracts'
@@ -155,7 +155,7 @@ function PositionsContentInner() {
           const borrowValue = Number(formatUnits(position.borrowAmount, 18)) * 1000 // Mock price
           position.healthFactor = collateralValue / borrowValue
         } else {
-          position.healthFactor = Infinity
+          position.healthFactor = Number.POSITIVE_INFINITY
         }
       }
 
@@ -181,14 +181,14 @@ function PositionsContentInner() {
   }
 
   const getHealthFactorColor = (healthFactor: number) => {
-    if (healthFactor === Infinity) return 'text-gray-400'
+    if (healthFactor === Number.POSITIVE_INFINITY) return 'text-gray-400'
     if (healthFactor > 2) return 'text-green-400'
     if (healthFactor > 1.5) return 'text-yellow-400'
     return 'text-red-400'
   }
 
   const getHealthFactorText = (healthFactor: number) => {
-    if (healthFactor === Infinity) return 'N/A'
+    if (healthFactor === Number.POSITIVE_INFINITY) return 'N/A'
     return healthFactor.toFixed(2)
   }
 
@@ -262,8 +262,8 @@ function PositionsContentInner() {
                   <div className="text-2xl font-bold">
                     {positions.length > 0 ? (
                       positions.reduce((sum, pos) => 
-                        sum + (pos.healthFactor === Infinity ? 0 : pos.healthFactor), 0
-                      ) / positions.filter(pos => pos.healthFactor !== Infinity).length || 0
+                        sum + (pos.healthFactor === Number.POSITIVE_INFINITY ? 0 : pos.healthFactor), 0
+                      ) / positions.filter(pos => pos.healthFactor !== Number.POSITIVE_INFINITY).length || 0
                     ).toFixed(2) : 'N/A'}
                   </div>
                   <p className="text-sm text-gray-400">Risk level indicator</p>
@@ -279,7 +279,7 @@ function PositionsContentInner() {
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto" />
                     <p className="text-gray-400 mt-2">Loading positions...</p>
                   </div>
                 ) : positions.length === 0 ? (

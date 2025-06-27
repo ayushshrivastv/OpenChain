@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import WalletConnector from '@/components/WalletConnector'
+import { WalletConnector } from '@/components/WalletConnector'
 import { TransactionModal } from '@/components/TransactionModal'
 import { useUserPosition } from '@/hooks/useUserPosition'
 import { useState, useEffect, useCallback } from 'react'

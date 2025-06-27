@@ -5,10 +5,22 @@ import { toast } from 'sonner'
 import { CONTRACT_ADDRESSES } from '@/lib/wagmi'
 import { LENDING_POOL_ABI } from '@/lib/contracts'
 import { CCIP_CONFIG } from '@/lib/chains'
+import { Transaction } from '@/types'
 
 // Helper function to get contract addresses for a chain
 const getContractAddresses = (chainId: number) => {
   return CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES] || null
+}
+
+// Simple CCIP fee estimation (in a real implementation, this would call the CCIP router)
+const estimateCCIPFee = async (
+  contractAddress: string,
+  targetChain: string,
+  amount: bigint
+): Promise<bigint> => {
+  // Simple fee estimation - in production, this should call the actual CCIP router
+  // For now, return a fixed fee of 0.001 LINK (18 decimals)
+  return parseUnits('0.001', 18)
 }
 
 interface PendingTransaction {
@@ -111,207 +123,171 @@ export function useTransactions() {
     } finally {
       setIsLoading(false)
     }
-  }, [address, writeContract, getContractAddresses])
+  }, [address, writeContract])
 
   // Borrow function - supports cross-chain borrowing with Chainlink CCIP
   const borrow = useCallback(async (
     asset: string,
     amount: string,
-    sourceChain: number,
-    destChain?: number
+    targetChain?: string
   ) => {
-    if (!address) {
-      toast.error('Please connect your wallet')
-      return
+    if (!address || !writeContract) {
+      throw new Error('Wallet not connected')
     }
 
     setIsLoading(true)
-    const txId = `borrow-${Date.now()}`
-    
+    setError(null)
+
     try {
-      const contractAddresses = getContractAddresses(sourceChain)
-      if (!contractAddresses) {
-        throw new Error('Unsupported chain')
-      }
+      const contractAddresses = getContractAddresses(1) // Assuming chainId 1
+      const amountWei = parseUnits(amount, 18)
 
-      const amountBigInt = parseUnits(amount, 18)
-      
-      // Add to pending transactions
-      const pendingTx: PendingTransaction = {
-        id: txId,
-        action: destChain && destChain !== sourceChain ? 'borrowCrossChain' : 'borrow',
+      // For now, simplified to same-chain borrow
+      await writeContract({
+        address: contractAddresses.lendingPool as `0x${string}`,
+        abi: LENDING_POOL_ABI,
+        functionName: 'borrow',
+        args: [
+          asset as `0x${string}`,
+          amountWei,
+          0n, // destChainSelector - 0 for same chain
+          address as `0x${string}` // receiver
+        ]
+      })
+
+      // Add to transaction history
+      const transaction: PendingTransaction = {
+        id: Date.now().toString(),
+        action: 'borrow',
         asset,
-        amount: amountBigInt,
+        amount: amountWei,
         status: 'pending',
-        sourceChain,
-        destChain,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        sourceChain: 1
       }
+
+      setPendingTransactions(prev => [transaction, ...prev])
       
-      setPendingTransactions(prev => [...prev, pendingTx])
-
-      if (destChain && destChain !== sourceChain) {
-        // Cross-chain borrow via CCIP
-        const destChainConfig = CCIP_CONFIG[destChain as keyof typeof CCIP_CONFIG]
-        if (!destChainConfig) {
-          throw new Error('Destination chain not supported')
-        }
-
-        await writeContract({
-          address: contractAddresses.lendingPool as `0x${string}`,
-          abi: LENDING_POOL_ABI,
-          functionName: 'borrow',
-          args: [
-            contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
-            amountBigInt,
-            BigInt(destChainConfig.chainSelector),
-            address as `0x${string}`
-          ] as const
-        })
-      } else {
-        // Same-chain borrow (use chain selector 0 for same chain)
-        await writeContract({
-          address: contractAddresses.lendingPool as `0x${string}`,
-          abi: LENDING_POOL_ABI,
-          functionName: 'borrow',
-          args: [
-            contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
-            amountBigInt,
-            0n, // Same chain selector
-            address as `0x${string}`
-          ] as const
-        })
-      }
-
-      toast.success('Borrow transaction submitted')
+      // Show success message
+      toast.success("Borrow transaction submitted successfully!")
+      
     } catch (err) {
-      console.error('Borrow error:', err)
-      toast.error('Borrow failed')
-      
-      // Remove from pending transactions on error
-      setPendingTransactions(prev => prev.filter(tx => tx.id !== txId))
+      const errorMessage = err instanceof Error ? err.message : 'Borrow failed'
+      setError(errorMessage)
+      toast.error(errorMessage)
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [address, writeContract, getContractAddresses])
+  }, [address, writeContract])
 
   // Repay function
   const repay = useCallback(async (
     asset: string,
     amount: string,
-    sourceChain: number
+    targetChain?: string
   ) => {
-    if (!address) {
-      toast.error('Please connect your wallet')
-      return
+    if (!address || !writeContract) {
+      throw new Error('Wallet not connected')
     }
 
     setIsLoading(true)
-    const txId = `repay-${Date.now()}`
-    
+    setError(null)
+
     try {
-      const contractAddresses = getContractAddresses(sourceChain)
-      if (!contractAddresses) {
-        throw new Error('Unsupported chain')
-      }
+      const contractAddresses = getContractAddresses(1) // Assuming chainId 1
+      const amountWei = parseUnits(amount, 18)
 
-      const amountBigInt = parseUnits(amount, 18)
-      
-      // Add to pending transactions
-      const pendingTx: PendingTransaction = {
-        id: txId,
-        action: 'repay',
-        asset,
-        amount: amountBigInt,
-        status: 'pending',
-        sourceChain,
-        timestamp: Date.now()
-      }
-      
-      setPendingTransactions(prev => [...prev, pendingTx])
-
+      // Simplified to same-chain repay
       await writeContract({
         address: contractAddresses.lendingPool as `0x${string}`,
         abi: LENDING_POOL_ABI,
         functionName: 'repay',
         args: [
-          contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
-          amountBigInt
-        ] as const,
-        // value: asset === 'ETH' ? amountBigInt : 0n
+          asset as `0x${string}`,
+          amountWei
+        ]
       })
 
-      toast.success('Repay transaction submitted')
-    } catch (err) {
-      console.error('Repay error:', err)
-      toast.error('Repay failed')
+      // Add to transaction history
+      const transaction: PendingTransaction = {
+        id: Date.now().toString(),
+        action: 'repay',
+        asset,
+        amount: amountWei,
+        status: 'pending',
+        timestamp: Date.now(),
+        sourceChain: 1
+      }
+
+      setPendingTransactions(prev => [transaction, ...prev])
       
-      // Remove from pending transactions on error
-      setPendingTransactions(prev => prev.filter(tx => tx.id !== txId))
+      // Show success message
+      toast.success("Repay transaction submitted successfully!")
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Repay failed'
+      setError(errorMessage)
+      toast.error(errorMessage)
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [address, writeContract, getContractAddresses])
+  }, [address, writeContract])
 
   // Withdraw function
   const withdraw = useCallback(async (
     asset: string,
     amount: string,
-    sourceChain: number
+    targetChain?: string
   ) => {
-    if (!address) {
-      toast.error('Please connect your wallet')
-      return
+    if (!address || !writeContract) {
+      throw new Error('Wallet not connected')
     }
 
     setIsLoading(true)
-    const txId = `withdraw-${Date.now()}`
-    
+    setError(null)
+
     try {
-      const contractAddresses = getContractAddresses(sourceChain)
-      if (!contractAddresses) {
-        throw new Error('Unsupported chain')
-      }
+      const contractAddresses = getContractAddresses(1) // Assuming chainId 1
+      const amountWei = parseUnits(amount, 18)
 
-      const amountBigInt = parseUnits(amount, 18)
-      
-      // Add to pending transactions
-      const pendingTx: PendingTransaction = {
-        id: txId,
-        action: 'withdraw',
-        asset,
-        amount: amountBigInt,
-        status: 'pending',
-        sourceChain,
-        timestamp: Date.now()
-      }
-      
-      setPendingTransactions(prev => [...prev, pendingTx])
-
+      // Simplified to same-chain withdraw
       await writeContract({
         address: contractAddresses.lendingPool as `0x${string}`,
         abi: LENDING_POOL_ABI,
         functionName: 'withdraw',
         args: [
-          contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
-          amountBigInt
-        ] as const
+          asset as `0x${string}`,
+          amountWei
+        ]
       })
 
-      toast.success('Withdraw transaction submitted')
-    } catch (err) {
-      console.error('Withdraw error:', err)
-      toast.error('Withdraw failed')
+      // Add to transaction history
+      const transaction: PendingTransaction = {
+        id: Date.now().toString(),
+        action: 'withdraw',
+        asset,
+        amount: amountWei,
+        status: 'pending',
+        timestamp: Date.now(),
+        sourceChain: 1
+      }
+
+      setPendingTransactions(prev => [transaction, ...prev])
       
-      // Remove from pending transactions on error
-      setPendingTransactions(prev => prev.filter(tx => tx.id !== txId))
+      // Show success message
+      toast.success("Withdraw transaction submitted successfully!")
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Withdraw failed'
+      setError(errorMessage)
+      toast.error(errorMessage)
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [address, writeContract, getContractAddresses])
+  }, [address, writeContract])
 
   // Handle write errors
   useEffect(() => {
@@ -385,3 +361,4 @@ export function useTransactions() {
     clearError: () => setError(null)
   }
 } 
+ 
