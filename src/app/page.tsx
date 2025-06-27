@@ -1,146 +1,160 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { WalletConnector } from '@/components/WalletConnector'
-import { TransactionModal } from '@/components/TransactionModal'
-import { useUserPosition } from '@/hooks/useUserPosition'
-import { useState, useEffect, useCallback } from 'react'
-import { formatUnits, formatCurrency } from '@/lib/contracts'
-import { useAccount, useBalance, usePublicClient, useChainId } from 'wagmi'
-import { CONTRACT_ADDRESSES } from '@/lib/wagmi'
-import { ERC20_ABI } from '@/lib/contracts'
-import dynamic from 'next/dynamic'
-import { CCIP_CONFIG } from '@/lib/chains'
+import { TransactionModal } from "@/components/TransactionModal";
+import { WalletConnector } from "@/components/WalletConnector";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUserPosition } from "@/hooks/useUserPosition";
+import { CCIP_CONFIG } from "@/lib/chains";
+import { formatCurrency, formatUnits } from "@/lib/contracts";
+import { ERC20_ABI } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES } from "@/lib/wagmi";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useState } from "react";
+import { useAccount, useBalance, useChainId, usePublicClient } from "wagmi";
 
 // Disable SSR for this component
 const DynamicHomeContent = dynamic(() => Promise.resolve(HomeContentInner), {
   ssr: false,
-})
+});
 
 export default function HomePage() {
-  return <DynamicHomeContent />
+  return <DynamicHomeContent />;
 }
 
 function HomeContentInner() {
-  const { position, prices, isLoading, healthStatus, availableBorrowPower } = useUserPosition()
-  const { address } = useAccount()
-  const publicClient = usePublicClient()
-  const chainId = useChainId()
+  const { position, prices, isLoading, healthStatus, availableBorrowPower } =
+    useUserPosition();
+  const { address } = useAccount();
+  const publicClient = usePublicClient();
+  const chainId = useChainId();
   const [modalState, setModalState] = useState<{
-    isOpen: boolean
-    type: 'deposit' | 'borrow' | 'repay' | 'withdraw'
-    asset: string
+    isOpen: boolean;
+    type: "deposit" | "borrow" | "repay" | "withdraw";
+    asset: string;
   }>({
     isOpen: false,
-    type: 'deposit',
-    asset: 'USDC'
-  })
-  const [assetBalances, setAssetBalances] = useState<Record<string, bigint>>({})
-  const [balancesLoading, setBalancesLoading] = useState(false)
+    type: "deposit",
+    asset: "USDC",
+  });
+  const [assetBalances, setAssetBalances] = useState<Record<string, bigint>>(
+    {},
+  );
+  const [balancesLoading, setBalancesLoading] = useState(false);
 
   // Wrap fetchAssetBalances in useCallback to fix dependency issue
   const fetchAssetBalances = useCallback(async () => {
-    if (!address || !publicClient || !chainId) return
+    if (!address || !publicClient || !chainId) return;
 
-    const contractAddresses = CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES]
-    if (!contractAddresses) return
+    const contractAddresses =
+      CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES];
+    if (!contractAddresses) return;
 
-    setBalancesLoading(true)
+    setBalancesLoading(true);
     try {
-      const balances: Record<string, bigint> = {}
-      
+      const balances: Record<string, bigint> = {};
+
       // Fetch balances for each supported asset (only for EVM chains)
-      if ('syntheticAssets' in contractAddresses) {
-        for (const [symbol, assetAddress] of Object.entries(contractAddresses.syntheticAssets)) {
+      if ("syntheticAssets" in contractAddresses) {
+        for (const [symbol, assetAddress] of Object.entries(
+          contractAddresses.syntheticAssets,
+        )) {
           try {
-            const balance = await publicClient.readContract({
+            const balance = (await publicClient.readContract({
               address: assetAddress as `0x${string}`,
               abi: ERC20_ABI,
-              functionName: 'balanceOf',
-              args: [address]
-            }) as bigint
+              functionName: "balanceOf",
+              args: [address],
+            })) as bigint;
 
-            balances[symbol] = balance
+            balances[symbol] = balance;
           } catch (error) {
-            console.warn(`Failed to fetch ${symbol} balance:`, error)
-            balances[symbol] = 0n
+            console.warn(`Failed to fetch ${symbol} balance:`, error);
+            balances[symbol] = 0n;
           }
         }
       }
 
-      setAssetBalances(balances)
+      setAssetBalances(balances);
     } catch (error) {
-      console.error('Error fetching asset balances:', error)
+      console.error("Error fetching asset balances:", error);
     } finally {
-      setBalancesLoading(false)
+      setBalancesLoading(false);
     }
-  }, [address, publicClient, chainId])
+  }, [address, publicClient, chainId]);
 
   useEffect(() => {
     if (address && publicClient && chainId) {
-      fetchAssetBalances()
+      fetchAssetBalances();
     }
-  }, [address, publicClient, chainId, fetchAssetBalances])
+  }, [address, publicClient, chainId, fetchAssetBalances]);
 
   const assets = [
-    { 
-      symbol: 'USDC',
-      name: 'USD Coin',
-      icon: '💵',
-      apy: '4.2%',
+    {
+      symbol: "USDC",
+      name: "USD Coin",
+      icon: "💵",
+      apy: "4.2%",
       price: prices.USDC?.price || 0n,
       balance: assetBalances.USDC || 0n,
       borrowed: position?.borrowBalances?.USDC || 0n,
-      collateral: position?.collateralBalances?.USDC || 0n
+      collateral: position?.collateralBalances?.USDC || 0n,
     },
-    { 
-      symbol: 'WETH',
-      name: 'Wrapped Ethereum',
-      icon: '⚡',
-      apy: '3.8%',
+    {
+      symbol: "WETH",
+      name: "Wrapped Ethereum",
+      icon: "⚡",
+      apy: "3.8%",
       price: prices.WETH?.price || 0n,
       balance: assetBalances.WETH || 0n,
       borrowed: position?.borrowBalances?.WETH || 0n,
-      collateral: position?.collateralBalances?.WETH || 0n
+      collateral: position?.collateralBalances?.WETH || 0n,
     },
-    { 
-      symbol: 'SOL',
-      name: 'Solana',
-      icon: '🌟',
-      apy: '5.1%',
+    {
+      symbol: "SOL",
+      name: "Solana",
+      icon: "🌟",
+      apy: "5.1%",
       price: prices.SOL?.price || 0n,
       balance: assetBalances.SOL || 0n,
       borrowed: position?.borrowBalances?.SOL || 0n,
-      collateral: position?.collateralBalances?.SOL || 0n
-    }
-  ]
+      collateral: position?.collateralBalances?.SOL || 0n,
+    },
+  ];
 
-  const openModal = (type: 'deposit' | 'borrow' | 'repay' | 'withdraw', asset: string) => {
-    setModalState({ isOpen: true, type, asset })
-  }
+  const openModal = (
+    type: "deposit" | "borrow" | "repay" | "withdraw",
+    asset: string,
+  ) => {
+    setModalState({ isOpen: true, type, asset });
+  };
 
   const closeModal = () => {
-    setModalState(prev => ({ ...prev, isOpen: false }))
-  }
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const getHealthFactorColor = (status: string) => {
     switch (status) {
-      case 'healthy': return 'text-green-500'
-      case 'warning': return 'text-yellow-500'
-      case 'danger': return 'text-orange-500'
-      case 'liquidatable': return 'text-red-500'
-      default: return 'text-gray-400'
+      case "healthy":
+        return "text-green-500";
+      case "warning":
+        return "text-yellow-500";
+      case "danger":
+        return "text-orange-500";
+      case "liquidatable":
+        return "text-red-500";
+      default:
+        return "text-gray-400";
     }
-  }
+  };
 
   const formatHealthFactor = (healthFactor: number) => {
-    if (healthFactor === 0) return '0.00'
-    if (healthFactor > 999) return '∞'
-    return healthFactor.toFixed(2)
-  }
+    if (healthFactor === 0) return "0.00";
+    if (healthFactor > 999) return "∞";
+    return healthFactor.toFixed(2);
+  };
 
-  const currentChain = CCIP_CONFIG[chainId as keyof typeof CCIP_CONFIG]
+  const currentChain = CCIP_CONFIG[chainId as keyof typeof CCIP_CONFIG];
 
   return (
     <div className="w-full flex flex-col gap-8">
@@ -151,42 +165,51 @@ function HomeContentInner() {
             Cross-Chain DeFi Lending Protocol
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Powered by Chainlink CCIP - Deposit collateral on one chain, borrow on another
+            Powered by Chainlink CCIP - Deposit collateral on one chain, borrow
+            on another
           </p>
         </div>
         <WalletConnector />
       </section>
 
-      {/* User Position Overview */}  
+      {/* User Position Overview */}
       <section>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gray-900 border border-gray-800 p-6">
             <div className="text-gray-400 text-sm">Total Supplied</div>
             <div className="text-3xl font-bold mt-2">
-              {position ? `$${formatUnits(position.totalCollateralValue, 18)}` : '$0.00'}
+              {position
+                ? `$${formatUnits(position.totalCollateralValue, 18)}`
+                : "$0.00"}
             </div>
             <div className="text-xs text-gray-500 mt-1">
               📊 Live Chainlink Prices
             </div>
           </Card>
-          
+
           <Card className="bg-gray-900 border border-gray-800 p-6">
             <div className="text-gray-400 text-sm">Total Borrowed</div>
             <div className="text-3xl font-bold mt-2">
-              {position ? `$${formatUnits(position.totalBorrowValue, 18)}` : '$0.00'}
+              {position
+                ? `$${formatUnits(position.totalBorrowValue, 18)}`
+                : "$0.00"}
             </div>
             <div className="text-xs text-gray-500 mt-1">
               ⚡ Cross-Chain Enabled
             </div>
           </Card>
-          
+
           <Card className="bg-gray-900 border border-gray-800 p-6">
             <div className="text-gray-400 text-sm">Health Factor</div>
-            <div className={`text-3xl font-bold mt-2 ${getHealthFactorColor(healthStatus)}`}>
-              {position ? formatHealthFactor(Number(position.healthFactor) / 1e18) : '-'}
+            <div
+              className={`text-3xl font-bold mt-2 ${getHealthFactorColor(healthStatus)}`}
+            >
+              {position
+                ? formatHealthFactor(Number(position.healthFactor) / 1e18)
+                : "-"}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              🛡️ {healthStatus || 'unknown'}
+              🛡️ {healthStatus || "unknown"}
             </div>
           </Card>
 
@@ -195,43 +218,41 @@ function HomeContentInner() {
             <div className="text-3xl font-bold mt-2">
               ${formatUnits(availableBorrowPower || 0n, 18)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              🔗 CCIP Available
-            </div>
+            <div className="text-xs text-gray-500 mt-1">🔗 CCIP Available</div>
           </Card>
         </div>
-        
+
         <div className="flex items-center gap-6">
-          <Button 
-            variant="default" 
+          <Button
+            variant="default"
             className="w-40"
-            onClick={() => openModal('deposit', 'USDC')}
+            onClick={() => openModal("deposit", "USDC")}
             disabled={!address}
           >
             💰 Deposit
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-40"
-            onClick={() => openModal('borrow', 'USDC')}
+            onClick={() => openModal("borrow", "USDC")}
             disabled={!address || !position}
           >
             🏦 Borrow
           </Button>
           {position && position.totalBorrowValue > 0n && (
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-40"
-              onClick={() => openModal('repay', 'USDC')}
+              onClick={() => openModal("repay", "USDC")}
             >
               💳 Repay
             </Button>
           )}
           {position && position.totalCollateralValue > 0n && (
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-40"
-              onClick={() => openModal('withdraw', 'USDC')}
+              onClick={() => openModal("withdraw", "USDC")}
             >
               📤 Withdraw
             </Button>
@@ -249,14 +270,19 @@ function HomeContentInner() {
                 (Real-time Chainlink Price Feeds)
               </span>
               {balancesLoading && (
-                <span className="text-sm text-blue-400">🔄 Loading balances...</span>
+                <span className="text-sm text-blue-400">
+                  🔄 Loading balances...
+                </span>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
               {assets.map((asset) => (
-                <div key={asset.symbol} className="flex items-center justify-between p-4 rounded-lg bg-gray-800">
+                <div
+                  key={asset.symbol}
+                  className="flex items-center justify-between p-4 rounded-lg bg-gray-800"
+                >
                   <div className="flex items-center gap-3">
                     <div className="text-2xl">{asset.icon}</div>
                     <div>
@@ -264,13 +290,15 @@ function HomeContentInner() {
                       <div className="text-sm text-gray-400">{asset.name}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-8">
                     {/* Current Price */}
                     <div className="text-center">
                       <div className="text-sm text-gray-400">Price</div>
                       <div className="font-semibold">
-                        {asset.price > 0n ? `$${formatUnits(asset.price, 8)}` : 'Loading...'}
+                        {asset.price > 0n
+                          ? `$${formatUnits(asset.price, 8)}`
+                          : "Loading..."}
                       </div>
                     </div>
 
@@ -313,22 +341,24 @@ function HomeContentInner() {
                     {/* APY */}
                     <div className="text-center">
                       <div className="text-sm text-gray-400">APY</div>
-                      <div className="font-semibold text-green-400">{asset.apy}</div>
+                      <div className="font-semibold text-green-400">
+                        {asset.apy}
+                      </div>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => openModal('deposit', asset.symbol)}
+                      <Button
+                        size="sm"
+                        onClick={() => openModal("deposit", asset.symbol)}
                         disabled={!address}
                       >
                         Supply
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
-                        onClick={() => openModal('borrow', asset.symbol)}
+                        onClick={() => openModal("borrow", asset.symbol)}
                         disabled={!address || !position}
                       >
                         Borrow
@@ -342,7 +372,8 @@ function HomeContentInner() {
             {!address && (
               <div className="text-center py-8">
                 <div className="text-gray-400 mb-4">
-                  Connect your wallet to view balances and interact with the protocol
+                  Connect your wallet to view balances and interact with the
+                  protocol
                 </div>
                 <WalletConnector />
               </div>
@@ -395,6 +426,5 @@ function HomeContentInner() {
         asset={modalState.asset}
       />
     </div>
-  )
+  );
 }
-

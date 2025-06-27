@@ -1,20 +1,23 @@
-'use client'
+"use client";
 
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useState } from "react";
 
 export function WalletConnector() {
-  const [selectedWallet, setSelectedWallet] = useState<'evm' | 'solana' | null>(null)
+  const [selectedWallet, setSelectedWallet] = useState<"evm" | "solana" | null>(
+    null,
+  );
 
   return (
     <div className="space-y-4">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Connect Your Wallet</h2>
         <p className="text-muted-foreground">
-          Connect your EVM or Solana wallet to start using the cross-chain protocol
+          Connect your EVM or Solana wallet to start using the cross-chain
+          protocol
         </p>
       </div>
 
@@ -33,7 +36,7 @@ export function WalletConnector() {
                 </p>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-sm font-medium">Supported Networks:</p>
               <div className="flex flex-wrap gap-2">
@@ -57,22 +60,22 @@ export function WalletConnector() {
                   authenticationStatus,
                   mounted,
                 }) => {
-                  const ready = mounted && authenticationStatus !== 'loading'
+                  const ready = mounted && authenticationStatus !== "loading";
                   const connected =
                     ready &&
                     account &&
                     chain &&
                     (!authenticationStatus ||
-                      authenticationStatus === 'authenticated')
+                      authenticationStatus === "authenticated");
 
                   return (
                     <div
                       {...(!ready && {
-                        'aria-hidden': true,
-                        'style': {
+                        "aria-hidden": true,
+                        style: {
                           opacity: 0,
-                          pointerEvents: 'none',
-                          userSelect: 'none',
+                          pointerEvents: "none",
+                          userSelect: "none",
                         },
                       })}
                     >
@@ -86,7 +89,7 @@ export function WalletConnector() {
                             >
                               Connect EVM Wallet
                             </Button>
-                          )
+                          );
                         }
 
                         if (chain.unsupported) {
@@ -98,7 +101,7 @@ export function WalletConnector() {
                             >
                               Wrong network
                             </Button>
-                          )
+                          );
                         }
 
                         return (
@@ -115,13 +118,13 @@ export function WalletConnector() {
                                     width: 16,
                                     height: 16,
                                     borderRadius: 999,
-                                    overflow: 'hidden',
+                                    overflow: "hidden",
                                     marginRight: 8,
                                   }}
                                 >
                                   {chain.iconUrl && (
                                     <img
-                                      alt={chain.name ?? 'Chain icon'}
+                                      alt={chain.name ?? "Chain icon"}
                                       src={chain.iconUrl}
                                       style={{ width: 16, height: 16 }}
                                     />
@@ -139,13 +142,13 @@ export function WalletConnector() {
                               {account.displayName}
                               {account.displayBalance
                                 ? ` (${account.displayBalance})`
-                                : ''}
+                                : ""}
                             </Button>
                           </div>
-                        )
+                        );
                       })()}
                     </div>
-                  )
+                  );
                 }}
               </ConnectButton.Custom>
             </div>
@@ -161,9 +164,7 @@ export function WalletConnector() {
               </div>
               <div>
                 <h3 className="font-semibold">Solana</h3>
-                <p className="text-sm text-muted-foreground">
-                  Solana Devnet
-                </p>
+                <p className="text-sm text-muted-foreground">Solana Devnet</p>
               </div>
             </div>
 
@@ -177,9 +178,7 @@ export function WalletConnector() {
             </div>
 
             <div className="pt-2">
-              <WalletMultiButton 
-                className="!w-full !bg-primary !text-primary-foreground hover:!bg-primary/90 !rounded-md !h-10"
-              />
+              <WalletMultiButton className="!w-full !bg-primary !text-primary-foreground hover:!bg-primary/90 !rounded-md !h-10" />
             </div>
           </CardContent>
         </Card>
@@ -214,5 +213,5 @@ export function WalletConnector() {
         </CardContent>
       </Card>
     </div>
-  )
-} 
+  );
+}

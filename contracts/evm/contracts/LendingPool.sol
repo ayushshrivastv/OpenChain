@@ -5,11 +5,13 @@ import "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
 import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./ChainlinkPriceFeed.sol";
 import "./LiquidationManager.sol";
 import "./RateLimiter.sol";
@@ -25,10 +27,10 @@ interface ISyntheticAsset {
 
 contract LendingPool is
     Initializable,
+    UUPSUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable,
-    CCIPReceiver
+    PausableUpgradeable
 {
     using SafeERC20 for IERC20;
 
@@ -127,7 +129,8 @@ contract LendingPool is
         _;
     }
 
-    constructor(address _router) CCIPReceiver(_router) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
         _disableInitializers();
     }
 
@@ -143,6 +146,13 @@ contract LendingPool is
         __ReentrancyGuard_init();
         __Pausable_init();
 
+        require(_ccipRouter != address(0), "Invalid CCIP router");
+        require(_linkToken != address(0), "Invalid LINK token");
+        require(_priceFeed != address(0), "Invalid price feed");
+        require(_liquidationManager != address(0), "Invalid liquidation manager");
+        require(_rateLimiter != address(0), "Invalid rate limiter");
+        require(_permissions != address(0), "Invalid permissions");
+
         ccipRouter = _ccipRouter;
         linkToken = _linkToken;
         ccipGasLimit = 500000; // Default gas limit for CCIP messages
@@ -151,6 +161,66 @@ contract LendingPool is
         liquidationManager = LiquidationManager(_liquidationManager);
         rateLimiter = RateLimiter(_rateLimiter);
         permissions = Permissions(_permissions);
+    }
+
+    // ==================== CCIP FUNCTIONS ====================
+
+    function _sendCrossChainMessage(
+        uint64 destChainSelector,
+        CrossChainMessage memory message
+    ) internal returns (bytes32) {
+        // Create CCIP message
+        Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
+            receiver: abi.encode(address(this)),
+            data: abi.encode(message),
+            tokenAmounts: new Client.EVMTokenAmount[](0),
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: ccipGasLimit})),
+            feeToken: linkToken
+        });
+
+        // Calculate fee
+        uint256 fees = IRouterClient(ccipRouter).getFee(destChainSelector, evm2AnyMessage);
+
+        // Check LINK balance
+        if (IERC20(linkToken).balanceOf(address(this)) < fees) {
+            revert CCIPMessageFailed();
+        }
+
+        // Approve router to spend LINK
+        IERC20(linkToken).approve(ccipRouter, fees);
+
+        // Send message
+        bytes32 messageId = IRouterClient(ccipRouter).ccipSend(destChainSelector, evm2AnyMessage);
+
+        emit CrossChainMessageSent(messageId, message.user, message.action, message.amount);
+        return messageId;
+    }
+
+    function ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) external {
+        require(msg.sender == ccipRouter, "Only router can call");
+
+        bytes32 messageId = any2EvmMessage.messageId;
+        if (processedMessages[messageId]) revert MessageAlreadyProcessed();
+        processedMessages[messageId] = true;
+
+        CrossChainMessage memory ccipMessage = abi.decode(any2EvmMessage.data, (CrossChainMessage));
+
+        // Process the message based on action
+        if (keccak256(bytes(ccipMessage.action)) == keccak256("borrow")) {
+            // Mint synthetic asset to user
+            ISyntheticAsset(supportedAssets[ccipMessage.asset].synthToken).mint(
+                ccipMessage.receiver != address(0) ? ccipMessage.receiver : ccipMessage.user,
+                ccipMessage.amount
+            );
+        } else if (keccak256(bytes(ccipMessage.action)) == keccak256("repay")) {
+            // Burn synthetic asset and update position
+            ISyntheticAsset(supportedAssets[ccipMessage.asset].synthToken).burn(
+                ccipMessage.user,
+                ccipMessage.amount
+            );
+        }
+
+        emit CrossChainMessageReceived(messageId, ccipMessage.user, ccipMessage.action, ccipMessage.amount);
     }
 
     // ==================== ASSET MANAGEMENT ====================
@@ -330,64 +400,6 @@ contract LendingPool is
         emit Withdraw(msg.sender, asset, amount, 0);
     }
 
-    // ==================== CCIP INTEGRATION ====================
-
-    function _sendCrossChainMessage(
-        uint64 destChainSelector,
-        CrossChainMessage memory message
-    ) internal returns (bytes32) {
-        // Encode the message
-        bytes memory encodedMessage = abi.encode(message);
-
-        // Create CCIP message
-        Client.EVM2AnyMessage memory ccipMessage = Client.EVM2AnyMessage({
-            receiver: abi.encode(address(this)), // Receiver on destination chain
-            data: encodedMessage,
-            tokenAmounts: new Client.EVMTokenAmount[](0), // No tokens transferred in this example
-            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: ccipGasLimit})),
-            feeToken: linkToken
-        });
-
-        // Calculate and pay fees
-        uint256 fees = IRouterClient(ccipRouter).getFee(destChainSelector, ccipMessage);
-        IERC20(linkToken).safeTransferFrom(msg.sender, address(this), fees);
-        IERC20(linkToken).forceApprove(ccipRouter, fees);
-
-        // Send message
-        bytes32 messageId = IRouterClient(ccipRouter).ccipSend(destChainSelector, ccipMessage);
-
-        emit CrossChainMessageSent(messageId, message.user, message.action, message.amount);
-        return messageId;
-    }
-
-    function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
-        bytes32 messageId = message.messageId;
-
-        // Prevent replay attacks
-        if (processedMessages[messageId]) revert MessageAlreadyProcessed();
-        processedMessages[messageId] = true;
-
-        // Decode the cross-chain message
-        CrossChainMessage memory ccipMessage = abi.decode(message.data, (CrossChainMessage));
-
-        // Process the message based on action
-        if (keccak256(bytes(ccipMessage.action)) == keccak256("borrow")) {
-            // Mint synthetic asset to user
-            ISyntheticAsset(supportedAssets[ccipMessage.asset].synthToken).mint(
-                ccipMessage.receiver != address(0) ? ccipMessage.receiver : ccipMessage.user,
-                ccipMessage.amount
-            );
-        } else if (keccak256(bytes(ccipMessage.action)) == keccak256("repay")) {
-            // Burn synthetic asset and update position
-            ISyntheticAsset(supportedAssets[ccipMessage.asset].synthToken).burn(
-                ccipMessage.user,
-                ccipMessage.amount
-            );
-        }
-
-        emit CrossChainMessageReceived(messageId, ccipMessage.user, ccipMessage.action, ccipMessage.amount);
-    }
-
     // ==================== LIQUIDATION ====================
 
     function liquidate(address user, address collateralAsset, address debtAsset, uint256 debtAmount)
@@ -561,10 +573,7 @@ contract LendingPool is
         IERC20(token).safeTransfer(owner(), amount);
     }
 
-}
+    // ==================== UPGRADE AUTHORIZATION ====================
 
-// ==================== INTERFACE IMPLEMENTATIONS ====================
-
-interface IERC20Metadata {
-    function decimals() external view returns (uint8);
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

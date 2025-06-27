@@ -1,0 +1,23 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0x31A09F533045988A6e7a487cc6BD50F9285BCBd1",
+  "contracts": {
+    "priceFeed": "0x2E38242Ff1FDa1783fdA682c24A3f409b5c8163f",
+    "permissions": "0xe5D4a658583D66a124Af361070c6135A6ce33F5a",
+    "rateLimiter": "0x4FFc21015131556B90A86Ab189D9Cba970683205",
+    "liquidationManager": "0x53E0672c2280e621f29dCC47696043d6B436F970",
+    "chainlinkSecurity": "0x90d25B11B7C7d4814B6D583DfE26321d08ba66ed",
+    "timeLock": "0xE55f1Ecc2144B09AFEB3fAf16F91c007568828C0",
+    "lendingPool": "0x473AC85625b7f9F18eA21d2250ea19Ded1093a99",
+    "synthUSDC": "0x77036167D0b74Fb82BA5966a507ACA06C5E16B30",
+    "synthWETH": "0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44"
+  },
+  "ccipConfig": {
+    "router": "0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59",
+    "linkToken": "0x779877A7B0D9E8603169DdbD7836e478b4624789",
+    "chainSelector": "16015286601757825753"
+  },
+  "deploymentTimestamp": 1751039418075,
+  "transactionHashes": []
+}

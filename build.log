@@ -1,0 +1,55 @@
+
+> nextjs-shadcn@0.1.0 build
+> next build
+
+   ▲ Next.js 15.3.4
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 23.0s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/8) ...
+ReferenceError: indexedDB is not defined
+    at i (.next/server/chunks/7434.js:97:2562)
+    at <unknown> (.next/server/chunks/7434.js:97:2705)
+    at E (.next/server/chunks/7434.js:97:2838)
+    at getItem (.next/server/chunks/7434.js:97:3107)
+    at h (.next/server/chunks/7434.js:97:1379)
+    at Object.getItem (.next/server/chunks/7434.js:97:4958)
+    at I.getItem (.next/server/chunks/7434.js:97:9304)
+    at C (.next/server/chunks/7434.js:97:10671)
+    at new R (.next/server/chunks/7434.js:97:11248)
+    at new aO (.next/server/chunks/7434.js:106:91649)
+ReferenceError: indexedDB is not defined
+    at i (.next/server/chunks/7434.js:97:2562)
+    at <unknown> (.next/server/chunks/7434.js:97:2705)
+    at E (.next/server/chunks/7434.js:97:2838)
+    at getItem (.next/server/chunks/7434.js:97:3107)
+    at h (.next/server/chunks/7434.js:97:1379)
+    at Object.getItem (.next/server/chunks/7434.js:97:4958)
+    at I.getItem (.next/server/chunks/7434.js:97:9304)
+    at C (.next/server/chunks/7434.js:97:10671)
+    at new R (.next/server/chunks/7434.js:97:11248)
+    at new aO (.next/server/chunks/7434.js:106:91649)
+   Generating static pages (2/8) 
+   Generating static pages (4/8) 
+   Generating static pages (6/8) 
+ ✓ Generating static pages (8/8)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    3.43 kB         348 kB
+├ ○ /_not-found                            990 B         105 kB
+├ ○ /borrow                              3.41 kB         336 kB
+├ ○ /deposit                             1.77 kB         335 kB
+├ ○ /positions                           2.47 kB         347 kB
+└ ○ /transactions                         1.5 kB         335 kB
++ First Load JS shared by all             104 kB
+  ├ chunks/1684-acda67a84286091d.js      46.2 kB
+  ├ chunks/4bd1b696-55df52134f34e100.js  53.2 kB
+  └ other shared chunks (total)          4.64 kB
+
+
+○  (Static)  prerendered as static content
+
