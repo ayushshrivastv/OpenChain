@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ChainlinkPriceFeed is Ownable {
@@ -38,7 +38,7 @@ contract ChainlinkPriceFeed is Ownable {
     error InvalidPriceData();
     error PriceFeedInactive();
 
-    constructor() {}
+    constructor() Ownable(msg.sender) {}
 
     /**
      * @dev Add a new price feed for an asset
@@ -139,16 +139,71 @@ contract ChainlinkPriceFeed is Ownable {
         if (!config.isActive) revert PriceFeedNotFound();
 
         try config.feed.latestRoundData() returns (
-            uint80 roundId,
+            uint80 /* roundId */,
             int256 rawPrice,
-            uint256 startedAt,
+            uint256 /* startedAt */,
             uint256 updatedAt,
-            uint80 answeredInRound
+            uint80 /* answeredInRound */
         ) {
             // Check if price is valid
             if (rawPrice <= 0) revert InvalidPriceData();
 
             // Check staleness
+            uint256 staleness = block.timestamp - updatedAt;
+            if (staleness > config.heartbeat || staleness > MAX_STALENESS) {
+                // Use fallback price if available and not too old
+                if (fallbackPrices[asset] > 0 &&
+                    (block.timestamp - fallbackTimestamps[asset]) < MAX_STALENESS) {
+                    return (int256(fallbackPrices[asset]), 18);
+                }
+
+                revert StalePriceData();
+            }
+
+            // Normalize price to 18 decimals
+            if (config.decimals < 18) {
+                price = rawPrice * int256(10 ** (18 - config.decimals));
+            } else if (config.decimals > 18) {
+                price = rawPrice / int256(10 ** (config.decimals - 18));
+            } else {
+                price = rawPrice;
+            }
+
+            return (price, 18);
+
+        } catch {
+            // If price feed fails, try fallback price
+            if (fallbackPrices[asset] > 0 &&
+                (block.timestamp - fallbackTimestamps[asset]) < MAX_STALENESS) {
+                return (int256(fallbackPrices[asset]), 18);
+            }
+
+            revert InvalidPriceData();
+        }
+    }
+
+    /**
+     * @dev Get price and emit staleness event if needed (non-view function)
+     * @param asset The asset token address
+     * @return price The asset price (normalized to 18 decimals)
+     * @return decimals The price decimals (always 18)
+     */
+    function getPriceWithEvents(address asset) external returns (int256 price, uint8 decimals) {
+        PriceFeedConfig memory config = priceFeeds[asset];
+
+        if (!config.isActive) revert PriceFeedNotFound();
+
+        try config.feed.latestRoundData() returns (
+            uint80,
+            int256 rawPrice,
+            uint256,
+            uint256 updatedAt,
+            uint80
+        ) {
+            // Check if price is valid
+            if (rawPrice <= 0) revert InvalidPriceData();
+
+            // Check staleness and emit event
             uint256 staleness = block.timestamp - updatedAt;
             if (staleness > config.heartbeat || staleness > MAX_STALENESS) {
                 emit StalePriceDetected(asset, updatedAt, staleness);

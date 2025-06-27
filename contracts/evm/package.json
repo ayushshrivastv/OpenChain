@@ -20,29 +20,30 @@
     "size": "npx hardhat size-contracts"
   },
   "dependencies": {
-    "@chainlink/contracts": "^1.4.0",
+    "@chainlink/contracts": "^1.2.0",
+    "@chainlink/contracts-ccip": "^1.5.0",
     "@openzeppelin/contracts": "^5.3.0",
     "@openzeppelin/contracts-upgradeable": "^5.3.0",
     "@openzeppelin/hardhat-upgrades": "^3.9.0",
     "dotenv": "^16.6.0"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
-    "@nomicfoundation/hardhat-ethers": "^3.0.0",
-    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
-    "@typechain/hardhat": "^9.0.0",
     "@typechain/ethers-v6": "^0.5.0",
-    "hardhat": "^2.22.0",
-    "hardhat-gas-reporter": "^1.0.9",
-    "hardhat-contract-sizer": "^2.10.0",
-    "solidity-coverage": "^0.8.5",
-    "solhint": "^5.0.0",
+    "@typechain/hardhat": "^9.0.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
     "chai": "^4.3.10",
     "ethers": "^6.10.0",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "@types/mocha": "^10.0.0"
+    "hardhat": "^2.22.0",
+    "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solhint": "^5.0.0",
+    "solidity-coverage": "^0.8.5",
+    "typescript": "^5.0.0"
   },
   "keywords": [
     "defi",

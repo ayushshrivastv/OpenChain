@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
@@ -84,8 +84,6 @@ contract Permissions is AccessControl, ReentrancyGuard {
 
     // Events
     event UserPermissionUpdated(address indexed user, PermissionLevel level, bool whitelisted, bool blacklisted);
-    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
-    event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
     event ActionPermissionSet(address indexed user, string action, bool allowed);
     event MultiSigConfigUpdated(address[] signers, uint256 threshold);
     event MultiSigOperationProposed(bytes32 indexed operationId, address proposer, string description);

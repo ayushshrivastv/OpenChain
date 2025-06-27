@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ChainlinkPriceFeed.sol";
@@ -96,7 +96,7 @@ contract LiquidationManager is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(address _lendingPool, address _priceFeed) {
+    constructor(address _lendingPool, address _priceFeed) Ownable(msg.sender) {
         lendingPool = ILendingPool(_lendingPool);
         priceFeed = ChainlinkPriceFeed(_priceFeed);
     }
@@ -131,12 +131,12 @@ contract LiquidationManager is Ownable, ReentrancyGuard {
     /**
      * @dev Check if a position can be liquidated
      * @param user The user address
-     * @return canLiquidate Whether the position can be liquidated
+     * @return liquidatable Whether the position can be liquidated
      * @return healthFactor Current health factor
      */
-    function canLiquidate(address user) external view returns (bool canLiquidate, uint256 healthFactor) {
+    function canLiquidate(address user) external view returns (bool liquidatable, uint256 healthFactor) {
         (, , healthFactor, ) = lendingPool.getUserPosition(user);
-        canLiquidate = healthFactor < LIQUIDATION_THRESHOLD && healthFactor > 0;
+        liquidatable = healthFactor < LIQUIDATION_THRESHOLD && healthFactor > 0;
     }
 
     /**

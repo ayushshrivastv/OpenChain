@@ -9,7 +9,7 @@ contract SyntheticAsset is ERC20, AccessControl {
     address public pool;
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         pool = msg.sender;
     }
 

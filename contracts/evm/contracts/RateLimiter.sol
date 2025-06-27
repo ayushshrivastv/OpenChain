@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract RateLimiter is Ownable, ReentrancyGuard {
 
@@ -62,13 +62,13 @@ contract RateLimiter is Ownable, ReentrancyGuard {
     event EmergencyWhitelistUpdated(address indexed user, bool whitelisted);
 
     // Errors
-    error RateLimitExceeded();
-    error UserBlocked(uint256 blockUntil);
+    error RateLimitExceededError();
+    error UserBlockedError(uint256 blockUntil);
     error InvalidConfiguration();
     error ActionNotConfigured();
     error EmergencyModeActive();
 
-    constructor() {}
+    constructor() Ownable(msg.sender) {}
 
     /**
      * @dev Configure rate limit for a specific action
@@ -158,7 +158,7 @@ contract RateLimiter is Ownable, ReentrancyGuard {
 
         // Check if user is blocked
         if (state.isBlocked && block.timestamp < state.blockUntil) {
-            revert UserBlocked(state.blockUntil);
+            revert UserBlockedError(state.blockUntil);
         }
 
         // Unblock user if block period has expired
@@ -173,7 +173,7 @@ contract RateLimiter is Ownable, ReentrancyGuard {
         if (!allowed) {
             // Block user for escalating violations
             _handleViolation(user, action, state, limit);
-            revert RateLimitExceeded();
+            revert RateLimitExceededError();
         }
 
         // Update state
@@ -216,7 +216,7 @@ contract RateLimiter is Ownable, ReentrancyGuard {
 
         (bool allowed, ) = _checkLimit(state, limit);
         if (!allowed) {
-            revert RateLimitExceeded();
+            revert RateLimitExceededError();
         }
 
         _updateRateState(state, limit);

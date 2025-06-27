@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@chainlink/contracts/src/v0.8/ccip/interfaces/IRouterClient.sol";
-import "@chainlink/contracts/src/v0.8/ccip/libraries/Client.sol";
-import "@chainlink/contracts/src/v0.8/ccip/applications/CCIPReceiver.sol";
+import "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
+import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ChainlinkPriceFeed.sol";
@@ -113,7 +113,7 @@ contract LendingPool is
     error CCIPMessageFailed();
 
     modifier onlyAuthorized() {
-        require(permissions.isAllowed(msg.sender) || msg.sender == owner(), "Not authorized");
+        require(permissions.canPerformAction(msg.sender, "deposit") || msg.sender == owner(), "Not authorized");
         _;
     }
 
@@ -123,8 +123,7 @@ contract LendingPool is
     }
 
     modifier rateLimited() {
-        require(rateLimiter.checkRate(msg.sender), "Rate limited");
-        rateLimiter.updateRate(msg.sender);
+        rateLimiter.enforceRateLimit(msg.sender, "deposit");
         _;
     }
 
@@ -140,7 +139,7 @@ contract LendingPool is
         address _rateLimiter,
         address _permissions
     ) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __Pausable_init();
 
@@ -352,7 +351,7 @@ contract LendingPool is
         // Calculate and pay fees
         uint256 fees = IRouterClient(ccipRouter).getFee(destChainSelector, ccipMessage);
         IERC20(linkToken).safeTransferFrom(msg.sender, address(this), fees);
-        IERC20(linkToken).safeApprove(ccipRouter, fees);
+        IERC20(linkToken).forceApprove(ccipRouter, fees);
 
         // Send message
         bytes32 messageId = IRouterClient(ccipRouter).ccipSend(destChainSelector, ccipMessage);
@@ -562,9 +561,10 @@ contract LendingPool is
         IERC20(token).safeTransfer(owner(), amount);
     }
 
-    // ==================== INTERFACE IMPLEMENTATIONS ====================
+}
 
-    interface IERC20Metadata {
-        function decimals() external view returns (uint8);
-    }
+// ==================== INTERFACE IMPLEMENTATIONS ====================
+
+interface IERC20Metadata {
+    function decimals() external view returns (uint8);
 }

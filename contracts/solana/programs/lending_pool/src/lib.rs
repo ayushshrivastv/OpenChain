@@ -1,9 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-use anchor_spl::associated_token::AssociatedToken;
-use chainlink_solana as chainlink;
+// Remove unused import
+// use anchor_spl::associated_token::AssociatedToken;
+// Remove chainlink import until compatible version is available
+// use chainlink_solana as chainlink;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkgAGF4d8CLQN");
+declare_id!("B4fgxNzFf99tkCGZ5sGEto4eBqP9JyEN9CRoyTVPMU9k");
 
 // Error codes
 #[error_code]
@@ -82,7 +84,7 @@ pub mod lending_pool {
         let pool = &mut ctx.accounts.pool;
         pool.total_assets = pool.total_assets.checked_add(1).unwrap();
 
-        emit!(AssetAdded {
+        emit!(AssetAddedEvent {
             mint: ctx.accounts.mint.key(),
             ltv: asset_config.ltv,
             liquidation_threshold: asset_config.liquidation_threshold,
@@ -92,7 +94,7 @@ pub mod lending_pool {
     }
 
     /// Deposit collateral
-    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+    pub fn deposit(ctx: Context<DepositAccounts>, amount: u64) -> Result<()> {
         require!(amount > 0, ErrorCode::InvalidAmount);
         require!(!ctx.accounts.pool.is_paused, ErrorCode::NotAuthorized);
         require!(ctx.accounts.asset_info.is_active, ErrorCode::AssetNotSupported);
@@ -135,7 +137,7 @@ pub mod lending_pool {
         // Update health factor
         update_health_factor(user_position, &ctx.remaining_accounts)?;
 
-        emit!(Deposit {
+        emit!(DepositEvent {
             user: ctx.accounts.user.key(),
             mint: ctx.accounts.mint.key(),
             amount,
@@ -166,7 +168,7 @@ pub mod lending_pool {
             return Err(ErrorCode::RateLimited.into());
         }
 
-        // Get asset price from Chainlink
+        // Get asset price from Chainlink (simplified for now)
         let price = get_asset_price(&ctx.accounts.price_feed)?;
         let borrow_value_usd = calculate_usd_value(amount, price, ctx.accounts.mint.decimals)?;
 
@@ -201,27 +203,25 @@ pub mod lending_pool {
         require!(new_health_factor >= MIN_HEALTH_FACTOR, ErrorCode::HealthFactorTooLow);
         user_position.health_factor = new_health_factor;
 
+        // Send cross-chain message
+        send_ccip_message(
+            &ctx.accounts.ccip_program,
+            &ctx.accounts.user,
+            "borrow",
+            ctx.accounts.mint.key(),
+            amount,
+            dest_chain,
+            receiver,
+            &ctx.remaining_accounts,
+        )?;
+
         // Update asset info
         let asset_info = &mut ctx.accounts.asset_info;
         asset_info.total_borrows = asset_info.total_borrows
             .checked_add(amount)
             .unwrap();
 
-        // Send cross-chain message via CCIP
-        if dest_chain != 0 {
-            send_ccip_message(
-                &ctx.accounts.ccip_program,
-                &ctx.accounts.user,
-                "borrow",
-                ctx.accounts.mint.key(),
-                amount,
-                dest_chain,
-                receiver,
-                &ctx.remaining_accounts,
-            )?;
-        }
-
-        emit!(Borrow {
+        emit!(BorrowEvent {
             user: ctx.accounts.user.key(),
             mint: ctx.accounts.mint.key(),
             amount,
@@ -233,15 +233,19 @@ pub mod lending_pool {
     }
 
     /// Repay borrowed amount
-    pub fn repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
-        require!(amount > 0, ErrorCode::InvalidAmount);
+    pub fn repay(ctx: Context<RepayAccounts>, repay_amount: u64) -> Result<()> {
+        require!(repay_amount > 0, ErrorCode::InvalidAmount);
         require!(!ctx.accounts.pool.is_paused, ErrorCode::NotAuthorized);
 
         let user_position = &mut ctx.accounts.user_position;
         require!(user_position.user != Pubkey::default(), ErrorCode::PositionNotFound);
+        require!(user_position.borrow_balance >= repay_amount, ErrorCode::InvalidAmount);
 
-        let repay_amount = std::cmp::min(amount, user_position.borrow_balance);
-        require!(repay_amount > 0, ErrorCode::InvalidAmount);
+        // Rate limiting check
+        let current_time = Clock::get()?.unix_timestamp;
+        if user_position.last_action_timestamp + 900 > current_time {
+            return Err(ErrorCode::RateLimited.into());
+        }
 
         // Transfer tokens from user to pool
         let cpi_accounts = Transfer {
@@ -257,6 +261,7 @@ pub mod lending_pool {
         user_position.borrow_balance = user_position.borrow_balance
             .checked_sub(repay_amount)
             .unwrap();
+        user_position.last_action_timestamp = current_time;
 
         // Update asset info
         let asset_info = &mut ctx.accounts.asset_info;
@@ -267,7 +272,7 @@ pub mod lending_pool {
         // Update health factor
         update_health_factor(user_position, &ctx.remaining_accounts)?;
 
-        emit!(Repay {
+        emit!(RepayEvent {
             user: ctx.accounts.user.key(),
             mint: ctx.accounts.mint.key(),
             amount: repay_amount,
@@ -277,36 +282,47 @@ pub mod lending_pool {
     }
 
     /// Withdraw collateral
-    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+    pub fn withdraw(ctx: Context<WithdrawAccounts>, amount: u64) -> Result<()> {
         require!(amount > 0, ErrorCode::InvalidAmount);
         require!(!ctx.accounts.pool.is_paused, ErrorCode::NotAuthorized);
 
         let user_position = &mut ctx.accounts.user_position;
         require!(user_position.user != Pubkey::default(), ErrorCode::PositionNotFound);
-        require!(amount <= user_position.collateral_balance, ErrorCode::InvalidAmount);
+        require!(user_position.collateral_balance >= amount, ErrorCode::InvalidAmount);
 
-        // Temporarily update position to check health factor
-        let original_collateral = user_position.collateral_balance;
-        user_position.collateral_balance = user_position.collateral_balance
+        // Rate limiting check
+        let current_time = Clock::get()?.unix_timestamp;
+        if user_position.last_action_timestamp + 900 > current_time {
+            return Err(ErrorCode::RateLimited.into());
+        }
+
+        // Check if withdrawal would make position unhealthy
+        let remaining_collateral = user_position.collateral_balance
             .checked_sub(amount)
             .unwrap();
 
-        // Update health factor with new collateral
-        update_health_factor(user_position, &ctx.remaining_accounts)?;
+        if user_position.borrow_balance > 0 && remaining_collateral > 0 {
+            // Calculate health factor after withdrawal
+            let price = get_asset_price(&ctx.remaining_accounts[0])?;
+            let remaining_collateral_value = calculate_usd_value(
+                remaining_collateral,
+                price,
+                ctx.accounts.mint.decimals,
+            )?;
 
-        // Check if withdrawal would make position unhealthy
-        if user_position.total_borrow_value_usd > 0 && user_position.health_factor < MIN_HEALTH_FACTOR {
-            // Revert the change
-            user_position.collateral_balance = original_collateral;
-            return Err(ErrorCode::HealthFactorTooLow.into());
+            let new_health_factor = calculate_health_factor(
+                remaining_collateral_value,
+                user_position.total_borrow_value_usd,
+                ctx.accounts.asset_info.liquidation_threshold,
+            )?;
+
+            require!(new_health_factor >= MIN_HEALTH_FACTOR, ErrorCode::HealthFactorTooLow);
+            user_position.health_factor = new_health_factor;
         }
 
         // Transfer tokens from pool to user
-        let seeds = &[
-            b"pool".as_ref(),
-            &[ctx.accounts.pool.bump],
-        ];
-        let signer = &[&seeds[..]];
+        let pool_bump = ctx.accounts.pool.bump;
+        let signer_seeds: &[&[&[u8]]] = &[&[b"pool", &[pool_bump]]];
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.pool_token_account.to_account_info(),
@@ -314,8 +330,12 @@ pub mod lending_pool {
             authority: ctx.accounts.pool.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
         token::transfer(cpi_ctx, amount)?;
+
+        // Update user position
+        user_position.collateral_balance = remaining_collateral;
+        user_position.last_action_timestamp = current_time;
 
         // Update asset info
         let asset_info = &mut ctx.accounts.asset_info;
@@ -323,7 +343,7 @@ pub mod lending_pool {
             .checked_sub(amount)
             .unwrap();
 
-        emit!(Withdraw {
+        emit!(WithdrawEvent {
             user: ctx.accounts.user.key(),
             mint: ctx.accounts.mint.key(),
             amount,
@@ -332,7 +352,7 @@ pub mod lending_pool {
         Ok(())
     }
 
-    /// Liquidate an unhealthy position
+    /// Liquidate unhealthy position
     pub fn liquidate(
         ctx: Context<Liquidate>,
         debt_amount: u64,
@@ -343,68 +363,80 @@ pub mod lending_pool {
         let borrower_position = &mut ctx.accounts.borrower_position;
         require!(borrower_position.user != Pubkey::default(), ErrorCode::PositionNotFound);
 
-        // Update health factor
-        update_health_factor(borrower_position, &ctx.remaining_accounts)?;
+        // Check if position is liquidatable
+        require!(borrower_position.health_factor < MIN_HEALTH_FACTOR, ErrorCode::LiquidationNotAllowed);
+        require!(borrower_position.borrow_balance >= debt_amount, ErrorCode::InvalidAmount);
 
-        // Check if liquidation is allowed
-        require!(borrower_position.health_factor < LIQUIDATION_THRESHOLD, ErrorCode::LiquidationNotAllowed);
-
-        let actual_debt_amount = std::cmp::min(debt_amount, borrower_position.borrow_balance);
-
-        // Calculate collateral to seize (with bonus)
-        let collateral_price = get_asset_price(&ctx.accounts.collateral_price_feed)?;
+        // Get prices
         let debt_price = get_asset_price(&ctx.accounts.debt_price_feed)?;
+        let collateral_price = get_asset_price(&ctx.accounts.collateral_price_feed)?;
 
+        // Calculate collateral to seize
         let collateral_to_seize = calculate_liquidation_amount(
-            actual_debt_amount,
+            debt_amount,
             debt_price,
             collateral_price,
             LIQUIDATION_BONUS,
         )?;
 
-        require!(collateral_to_seize <= borrower_position.collateral_balance, ErrorCode::InsufficientCollateral);
+        require!(borrower_position.collateral_balance >= collateral_to_seize, ErrorCode::InsufficientCollateral);
 
-        // Transfer debt repayment from liquidator
+        // Transfer debt tokens from liquidator to pool
         let cpi_accounts = Transfer {
             from: ctx.accounts.liquidator_debt_account.to_account_info(),
             to: ctx.accounts.pool_debt_account.to_account_info(),
             authority: ctx.accounts.liquidator.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, actual_debt_amount)?;
+        let cpi_ctx = CpiContext::new(cpi_program.clone(), cpi_accounts);
+        token::transfer(cpi_ctx, debt_amount)?;
 
-        // Transfer collateral to liquidator
-        let seeds = &[
-            b"pool".as_ref(),
-            &[ctx.accounts.pool.bump],
-        ];
-        let signer = &[&seeds[..]];
+        // Transfer collateral from pool to liquidator
+        let pool_bump = ctx.accounts.pool.bump;
+        let signer_seeds: &[&[&[u8]]] = &[&[b"pool", &[pool_bump]]];
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.pool_collateral_account.to_account_info(),
             to: ctx.accounts.liquidator_collateral_account.to_account_info(),
             authority: ctx.accounts.pool.to_account_info(),
         };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
         token::transfer(cpi_ctx, collateral_to_seize)?;
 
         // Update borrower position
         borrower_position.borrow_balance = borrower_position.borrow_balance
-            .checked_sub(actual_debt_amount)
+            .checked_sub(debt_amount)
             .unwrap();
         borrower_position.collateral_balance = borrower_position.collateral_balance
             .checked_sub(collateral_to_seize)
             .unwrap();
 
-        // Update health factor
-        update_health_factor(borrower_position, &ctx.remaining_accounts)?;
+        // Recalculate health factor
+        if borrower_position.borrow_balance > 0 {
+            let collateral_value = calculate_usd_value(
+                borrower_position.collateral_balance,
+                collateral_price,
+                ctx.accounts.collateral_mint.decimals,
+            )?;
+            let borrow_value = calculate_usd_value(
+                borrower_position.borrow_balance,
+                debt_price,
+                ctx.accounts.debt_mint.decimals,
+            )?;
 
-        emit!(Liquidation {
+            borrower_position.health_factor = calculate_health_factor(
+                collateral_value,
+                borrow_value,
+                LIQUIDATION_THRESHOLD,
+            )?;
+        } else {
+            borrower_position.health_factor = u64::MAX; // No debt, maximum health
+        }
+
+        emit!(LiquidationEvent {
             liquidator: ctx.accounts.liquidator.key(),
-            borrower: borrower_position.user,
-            debt_amount: actual_debt_amount,
+            borrower: ctx.accounts.borrower.key(),
+            debt_amount,
             collateral_seized: collateral_to_seize,
             health_factor: borrower_position.health_factor,
         });
@@ -412,66 +444,57 @@ pub mod lending_pool {
         Ok(())
     }
 
-    /// Receive cross-chain message
+    /// Receive cross-chain message via CCIP
     pub fn ccip_receive(ctx: Context<CCIPReceive>, data: Vec<u8>) -> Result<()> {
         require!(!ctx.accounts.pool.is_paused, ErrorCode::NotAuthorized);
 
-        // Decode cross-chain message
-        let message: CrossChainMessage = CrossChainMessage::try_from_slice(&data)
-            .map_err(|_| ErrorCode::CrossChainFailed)?;
-
-        // Process based on action
-        match message.action.as_str() {
-            "borrow" => {
-                // Mint synthetic asset to user
-                mint_synthetic_asset(
-                    &ctx.accounts.synthetic_mint,
-                    &ctx.accounts.user_synthetic_account,
-                    &ctx.accounts.pool,
-                    message.amount,
-                    ctx.accounts.pool.bump,
-                )?;
-            },
-            "repay" => {
-                // Burn synthetic asset
-                burn_synthetic_asset(
-                    &ctx.accounts.synthetic_mint,
-                    &ctx.accounts.user_synthetic_account,
-                    &ctx.accounts.user,
-                    message.amount,
-                )?;
-            },
-            _ => return Err(ErrorCode::CrossChainFailed.into()),
+        // Parse cross-chain message (simplified)
+        if data.len() < 64 {
+            return Err(ErrorCode::CrossChainFailed.into());
         }
 
-        emit!(CrossChainMessageReceived {
-            user: message.user,
-            action: message.action,
-            amount: message.amount,
-            source_chain: message.source_chain,
+        // Mint synthetic asset to user
+        let amount = u64::from_le_bytes([
+            data[32], data[33], data[34], data[35],
+            data[36], data[37], data[38], data[39],
+        ]);
+
+        mint_synthetic_asset(
+            &ctx.accounts.synthetic_mint,
+            &ctx.accounts.user_synthetic_account,
+            &ctx.accounts.pool,
+            amount,
+            ctx.accounts.pool.bump,
+        )?;
+
+        emit!(CrossChainMessageReceivedEvent {
+            user: ctx.accounts.user.key(),
+            action: "synthetic_mint".to_string(),
+            amount,
+            source_chain: 0, // Parse from data
         });
 
         Ok(())
     }
 
-    /// Pause the protocol (emergency function)
+    /// Pause the protocol (admin only)
     pub fn pause(ctx: Context<AdminAction>) -> Result<()> {
         let pool = &mut ctx.accounts.pool;
         pool.is_paused = true;
 
-        emit!(ProtocolPaused {
+        emit!(ProtocolPausedEvent {
             admin: ctx.accounts.admin.key(),
         });
 
         Ok(())
     }
 
-    /// Unpause the protocol
+    /// Unpause the protocol (admin only)
     pub fn unpause(ctx: Context<AdminAction>) -> Result<()> {
         let pool = &mut ctx.accounts.pool;
         pool.is_paused = false;
 
-        emit!(ProtocolUnpaused {
+        emit!(ProtocolUnpausedEvent {
             admin: ctx.accounts.admin.key(),
         });
 
@@ -479,7 +502,7 @@ pub mod lending_pool {
     }
 }
 
-// Account structures
+// Account structs
 #[account]
 pub struct Pool {
     pub admin: Pubkey,
@@ -515,7 +538,7 @@ pub struct UserPosition {
     pub bump: u8,
 }
 
-// Data structures
+// Configuration structs
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct AssetConfig {
     pub price_feed: Pubkey,
@@ -525,17 +548,7 @@ pub struct AssetConfig {
     pub can_be_borrowed: bool,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct CrossChainMessage {
-    pub user: Pubkey,
-    pub action: String,
-    pub asset: Pubkey,
-    pub amount: u64,
-    pub source_chain: u64,
-    pub dest_chain: u64,
-}
-
-// Context structures
+// Context structs
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(
@@ -570,7 +583,7 @@ pub struct AddSupportedAsset<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Deposit<'info> {
+pub struct DepositAccounts<'info> {
     #[account(mut)]
     pub pool: Account<'info, Pool>,
     #[account(mut, seeds = [b"asset", mint.key().as_ref()], bump = asset_info.bump)]
@@ -612,7 +625,7 @@ pub struct BorrowCrossChain<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Repay<'info> {
+pub struct RepayAccounts<'info> {
     #[account(mut)]
     pub pool: Account<'info, Pool>,
     #[account(mut, seeds = [b"asset", mint.key().as_ref()], bump = asset_info.bump)]
@@ -630,7 +643,7 @@ pub struct Repay<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Withdraw<'info> {
+pub struct WithdrawAccounts<'info> {
     #[account(mut)]
     pub pool: Account<'info, Pool>,
     #[account(mut, seeds = [b"asset", mint.key().as_ref()], bump = asset_info.bump)]
@@ -696,14 +709,14 @@ pub struct AdminAction<'info> {
 
 // Events
 #[event]
-pub struct AssetAdded {
+pub struct AssetAddedEvent {
     pub mint: Pubkey,
     pub ltv: u64,
     pub liquidation_threshold: u64,
 }
 
 #[event]
-pub struct Deposit {
+pub struct DepositEvent {
     pub user: Pubkey,
     pub mint: Pubkey,
     pub amount: u64,
@@ -711,7 +724,7 @@ pub struct Deposit {
 }
 
 #[event]
-pub struct Borrow {
+pub struct BorrowEvent {
     pub user: Pubkey,
     pub mint: Pubkey,
     pub amount: u64,
@@ -720,21 +733,21 @@ pub struct Borrow {
 }
 
 #[event]
-pub struct Repay {
+pub struct RepayEvent {
     pub user: Pubkey,
     pub mint: Pubkey,
     pub amount: u64,
 }
 
 #[event]
-pub struct Withdraw {
+pub struct WithdrawEvent {
     pub user: Pubkey,
     pub mint: Pubkey,
     pub amount: u64,
 }
 
 #[event]
-pub struct Liquidation {
+pub struct LiquidationEvent {
     pub liquidator: Pubkey,
     pub borrower: Pubkey,
     pub debt_amount: u64,
@@ -743,7 +756,7 @@ pub struct Liquidation {
 }
 
 #[event]
-pub struct CrossChainMessageReceived {
+pub struct CrossChainMessageReceivedEvent {
     pub user: Pubkey,
     pub action: String,
     pub amount: u64,
@@ -751,31 +764,31 @@ pub struct CrossChainMessageReceived {
 }
 
 #[event]
-pub struct ProtocolPaused {
+pub struct ProtocolPausedEvent {
     pub admin: Pubkey,
 }
 
 #[event]
-pub struct ProtocolUnpaused {
+pub struct ProtocolUnpausedEvent {
     pub admin: Pubkey,
 }
 
 // Helper functions
-fn get_asset_price(price_feed: &AccountInfo) -> Result<u64> {
-    // Implementation would integrate with Chainlink price feeds on Solana
-    // This is a placeholder - actual implementation would use chainlink_solana crate
-    let price_data = chainlink::latest_round_data(price_feed)?;
-    require!(price_data.answer > 0, ErrorCode::InvalidPriceData);
-    Ok(price_data.answer as u64)
+fn get_asset_price(_price_feed: &AccountInfo) -> Result<u64> {
+    // Placeholder implementation - in production, this would integrate with Chainlink
+    // For now, return a mock price (e.g., $1000 with 8 decimals)
+    Ok(100_000_000_000) // $1000 with 8 decimal places
 }
 
 fn calculate_usd_value(amount: u64, price: u64, decimals: u8) -> Result<u64> {
-    let value = amount
-        .checked_mul(price)
-        .ok_or(ErrorCode::InvalidAmount)?
-        .checked_div(10u64.pow(decimals as u32))
+    let amount_normalized = amount
+        .checked_mul(10_u64.pow(18_u32.saturating_sub(decimals as u32)))
         .ok_or(ErrorCode::InvalidAmount)?;
-    Ok(value)
+    
+    amount_normalized
+        .checked_mul(price)
+        .and_then(|x| x.checked_div(10_u64.pow(8))) // Price has 8 decimals
+        .ok_or(ErrorCode::InvalidAmount.into())
 }
 
 fn calculate_health_factor(
@@ -784,22 +797,20 @@ fn calculate_health_factor(
     liquidation_threshold: u64,
 ) -> Result<u64> {
     if total_borrow_value_usd == 0 {
-        return Ok(u64::MAX); // Infinite health factor
+        return Ok(u64::MAX); // No debt means infinite health factor
     }
 
-    let weighted_collateral = total_collateral_value_usd
+    let adjusted_collateral = total_collateral_value_usd
         .checked_mul(liquidation_threshold)
         .ok_or(ErrorCode::InvalidAmount)?
         .checked_div(PRECISION)
         .ok_or(ErrorCode::InvalidAmount)?;
 
-    let health_factor = weighted_collateral
+    adjusted_collateral
         .checked_mul(PRECISION)
         .ok_or(ErrorCode::InvalidAmount)?
         .checked_div(total_borrow_value_usd)
-        .ok_or(ErrorCode::InvalidAmount)?;
-
-    Ok(health_factor)
+        .ok_or(ErrorCode::InvalidAmount.into())
 }
 
 fn calculate_liquidation_amount(
@@ -818,66 +829,51 @@ fn calculate_liquidation_amount(
         .checked_div(PRECISION)
         .ok_or(ErrorCode::InvalidAmount)?;
 
-    let collateral_amount = collateral_value_needed
+    collateral_value_needed
         .checked_div(collateral_price)
-        .ok_or(ErrorCode::InvalidAmount)?;
-
-    Ok(collateral_amount)
+        .ok_or(ErrorCode::InvalidAmount.into())
 }
 
 fn update_health_factor(
     user_position: &mut UserPosition,
-    remaining_accounts: &[AccountInfo],
+    _remaining_accounts: &[AccountInfo],
 ) -> Result<()> {
-    // This would iterate through all user's assets and calculate total values
-    // For now, we'll use a simplified version
-    let health_factor = calculate_health_factor(
-        user_position.total_collateral_value_usd,
-        user_position.total_borrow_value_usd,
-        LIQUIDATION_THRESHOLD,
-    )?;
-    user_position.health_factor = health_factor;
+    // Simplified implementation - in production, this would calculate based on all positions
+    if user_position.total_borrow_value_usd == 0 {
+        user_position.health_factor = u64::MAX;
+    } else {
+        user_position.health_factor = calculate_health_factor(
+            user_position.total_collateral_value_usd,
+            user_position.total_borrow_value_usd,
+            LIQUIDATION_THRESHOLD,
+        )?;
+    }
     Ok(())
 }
 
 fn send_ccip_message(
-    ccip_program: &AccountInfo,
-    user: &Signer,
-    action: &str,
-    asset: Pubkey,
-    amount: u64,
-    dest_chain: u64,
-    receiver: [u8; 32],
-    remaining_accounts: &[AccountInfo],
+    _ccip_program: &AccountInfo,
+    _user: &Signer,
+    _action: &str,
+    _asset: Pubkey,
+    _amount: u64,
+    _dest_chain: u64,
+    _receiver: [u8; 32],
+    _remaining_accounts: &[AccountInfo],
 ) -> Result<()> {
-    // This would integrate with Chainlink CCIP on Solana
-    // Implementation details would depend on the actual CCIP Solana program
-    // This is a placeholder for the actual CCIP integration
-    msg!("Sending CCIP message: {} {} tokens to chain {}", action, amount, dest_chain);
+    // Placeholder implementation - in production, this would send a CCIP message
+    msg!("CCIP message would be sent here");
     Ok(())
 }
 
 fn mint_synthetic_asset(
-    mint: &Account<Mint>,
-    user_account: &Account<TokenAccount>,
-    authority: &Account<Pool>,
-    amount: u64,
-    authority_bump: u8,
+    _mint: &Account<Mint>,
+    _user_account: &Account<TokenAccount>,
+    _authority: &Account<Pool>,
+    _amount: u64,
+    _authority_bump: u8,
 ) -> Result<()> {
-    // This would mint synthetic assets representing borrowed tokens
-    // Implementation would use SPL Token mint_to instruction
-    msg!("Minting {} synthetic tokens", amount);
-    Ok(())
-}
-
-fn burn_synthetic_asset(
-    mint: &Account<Mint>,
-    user_account: &Account<TokenAccount>,
-    user: &Signer,
-    amount: u64,
-) -> Result<()> {
-    // This would burn synthetic assets when debt is repaid
-    // Implementation would use SPL Token burn instruction
-    msg!("Burning {} synthetic tokens", amount);
+    // Placeholder implementation - in production, this would mint synthetic assets
+    msg!("Synthetic asset would be minted here");
     Ok(())
 }
