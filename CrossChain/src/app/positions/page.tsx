@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { WalletConnector } from '@/components/WalletConnector'
 import { TransactionModal } from '@/components/TransactionModal'
 import { useAccount, usePublicClient, useChainId } from 'wagmi'
-import { formatUnits } from '@/lib/contracts'
+import { formatUnits, CHAINLINK_PRICE_FEED_ABI } from '@/lib/contracts'
 import { CONTRACT_ADDRESSES } from '@/lib/wagmi'
 import { LENDING_POOL_ABI } from '@/lib/contracts'
 import dynamic from 'next/dynamic'
@@ -150,10 +150,34 @@ function PositionsContentInner() {
       const positionsArray = Array.from(positionMap.values())
       for (const position of positionsArray) {
         if (position.borrowAmount > 0n) {
-          // Simplified health factor calculation
-          const collateralValue = Number(formatUnits(position.collateralAmount, 18)) * 1000 // Mock price
-          const borrowValue = Number(formatUnits(position.borrowAmount, 18)) * 1000 // Mock price
-          position.healthFactor = collateralValue / borrowValue
+          // Get real price from Chainlink price feeds
+          try {
+            const collateralPrice = await publicClient?.readContract({
+              address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
+              abi: CHAINLINK_PRICE_FEED_ABI,
+              functionName: 'getPrice',
+              args: [position.asset as `0x${string}`]
+            }) as [bigint, boolean] | undefined
+
+            const borrowPrice = await publicClient?.readContract({
+              address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
+              abi: CHAINLINK_PRICE_FEED_ABI,
+              functionName: 'getPrice',
+              args: [position.asset as `0x${string}`]
+            }) as [bigint, boolean] | undefined
+
+            if (collateralPrice && borrowPrice) {
+              const collateralValue = Number(formatUnits(position.collateralAmount, 18)) * Number(formatUnits(collateralPrice[0], 8))
+              const borrowValue = Number(formatUnits(position.borrowAmount, 18)) * Number(formatUnits(borrowPrice[0], 8))
+              position.healthFactor = collateralValue / borrowValue
+            } else {
+              // Fallback to 1:1 ratio if price feeds unavailable
+              position.healthFactor = Number(formatUnits(position.collateralAmount, 18)) / Number(formatUnits(position.borrowAmount, 18))
+            }
+          } catch (error) {
+            console.warn('Price feed unavailable, using 1:1 ratio:', error)
+            position.healthFactor = Number(formatUnits(position.collateralAmount, 18)) / Number(formatUnits(position.borrowAmount, 18))
+          }
         } else {
           position.healthFactor = Number.POSITIVE_INFINITY
         }

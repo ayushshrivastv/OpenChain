@@ -134,19 +134,23 @@ export function useChainlinkSecurity() {
       throw new Error('Wallet not connected or contract not available')
     }
 
-    try {
-      const { request } = await publicClient!.simulateContract({
+        try {
+      if (!publicClient || !walletClient || !address) {
+        throw new Error('Required clients not available')
+      }
+
+      const { request } = await publicClient.simulateContract({
         address: contractAddresses.chainlinkSecurity as `0x${string}`,
         abi: CHAINLINK_SECURITY_ABI,
         functionName: 'requestLiquidatorSelection',
         args: [user as `0x${string}`, amount],
-        account: address!
+        account: address as `0x${string}`
       })
 
       const hash = await walletClient.writeContract(request)
-      
+        
       // Wait for transaction confirmation
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash })
+      const receipt = await publicClient.waitForTransactionReceipt({ hash })
       
       // Extract request ID from logs
       const requestId = receipt.logs[0]?.topics[1] || '0x'
@@ -229,21 +233,21 @@ export function useChainlinkSecurity() {
 
   // Add liquidator to the authorized pool
   const addLiquidator = useCallback(async (liquidatorAddress: string) => {
-    if (!walletClient || !contractAddresses?.chainlinkSecurity) {
+    if (!publicClient || !walletClient || !address || !contractAddresses?.chainlinkSecurity) {
       throw new Error('Wallet not connected or contract not available')
     }
 
     try {
-      const { request } = await publicClient!.simulateContract({
+      const { request } = await publicClient.simulateContract({
         address: contractAddresses.chainlinkSecurity as `0x${string}`,
         abi: CHAINLINK_SECURITY_ABI,
         functionName: 'addLiquidator',
         args: [liquidatorAddress as `0x${string}`],
-        account: address!
+        account: address as `0x${string}`
       })
 
       const hash = await walletClient.writeContract(request)
-      await publicClient!.waitForTransactionReceipt({ hash })
+      await publicClient.waitForTransactionReceipt({ hash })
       return hash
     } catch (err) {
       console.error('Failed to add liquidator:', err)
@@ -253,20 +257,20 @@ export function useChainlinkSecurity() {
 
   // Disable emergency mode (admin only)
   const disableEmergencyMode = useCallback(async () => {
-    if (!walletClient || !contractAddresses?.chainlinkSecurity) {
+    if (!publicClient || !walletClient || !address || !contractAddresses?.chainlinkSecurity) {
       throw new Error('Wallet not connected or contract not available')
     }
 
     try {
-      const { request } = await publicClient!.simulateContract({
+      const { request } = await publicClient.simulateContract({
         address: contractAddresses.chainlinkSecurity as `0x${string}`,
         abi: CHAINLINK_SECURITY_ABI,
         functionName: 'disableEmergencyMode',
-        account: address!
+        account: address as `0x${string}`
       })
 
       const hash = await walletClient.writeContract(request)
-      await publicClient!.waitForTransactionReceipt({ hash })
+      await publicClient.waitForTransactionReceipt({ hash })
       return hash
     } catch (err) {
       console.error('Failed to disable emergency mode:', err)
@@ -302,7 +306,7 @@ export function useChainlinkSecurity() {
       abi: CHAINLINK_SECURITY_ABI,
       eventName: 'SecurityAlert',
       onLogs: (logs) => {
-        logs.forEach(log => {
+        for (const log of logs) {
           const alert: SecurityAlertType = {
             id: log.transactionHash,
             type: log.args.alertType as string,
@@ -314,7 +318,7 @@ export function useChainlinkSecurity() {
           }
           
           setSecurityAlerts(prev => [alert, ...prev.slice(0, 49)]) // Keep last 50 alerts
-        })
+        }
       }
     })
 

@@ -669,3 +669,4 @@ export const AUTOMATION_REGISTRY_ABI = [
     outputs: []
   }
 ] as const 
+ 
