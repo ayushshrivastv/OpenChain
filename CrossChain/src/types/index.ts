@@ -35,33 +35,47 @@ export interface CrossChainMessage {
 export interface Transaction {
   id: string
   hash: string
-  timestamp: number
-  action: 'deposit' | 'borrow' | 'repay' | 'withdraw'
+  action: 'deposit' | 'depositCrossChain' | 'borrow' | 'repay' | 'withdraw'
   asset: string
   amount: bigint
-  sourceChain?: number
-  destChain?: number
-  status: 'pending' | 'confirmed' | 'failed'
+  timestamp: number | string
+  status: 'pending' | 'completed' | 'failed'
+  sourceChain?: number | string
+  destChain?: number | string
   ccipMessageId?: string
-  user: string
+  user?: string
 }
 
 export interface ChainConfig {
   id: number
   name: string
-  router: string
-  linkToken: string
-  chainSelector: string
-  rpcUrl: string
-  blockExplorer: string
+  nativeCurrency: {
+    name: string
+    symbol: string
+    decimals: number
+  }
+  rpcUrls: {
+    default: {
+      http: string[]
+    }
+    public: {
+      http: string[]
+    }
+  }
+  blockExplorers?: {
+    default: {
+      name: string
+      url: string
+    }
+  }
+  testnet?: boolean
 }
 
 export interface PriceData {
   asset: string
   price: bigint
-  decimals: number
   timestamp: number
-  isStale: boolean
+  confidence: number
 }
 
 export interface LiquidationData {
@@ -219,5 +233,18 @@ export interface TimeLockConfig {
   minDelay: number
   criticalDelay: number
   emergencyDelay: number
+}
+
+export interface AssetConfig {
+  address: string
+  symbol: string
+  name: string
+  decimals: number
+  priceFeed: string
+  ltv: number
+  liquidationThreshold: number
+  canBeBorrowed: boolean
+  canBeCollateral: boolean
+  isActive: boolean
 } 
  

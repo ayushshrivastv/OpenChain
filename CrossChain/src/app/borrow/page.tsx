@@ -77,10 +77,9 @@ function BorrowContentInner() {
     }
   }
 
-  const formatHealthFactor = (healthFactor: bigint) => {
-    const hf = Number(healthFactor) / 1e18
-    if (hf > 999) return '∞'
-    return hf.toFixed(2)
+  const formatHealthFactor = (healthFactor: number) => {
+    if (healthFactor === 0) return '0.00'
+    return healthFactor.toFixed(2)
   }
 
   const getHealthFactorPercentage = () => {
@@ -129,7 +128,7 @@ function BorrowContentInner() {
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-400">Health Factor:</span>
                       <span className={`font-medium ${getHealthFactorColor(healthStatus)}`}>
-                        {formatHealthFactor(position.healthFactor)} ({healthStatus})
+                        {formatHealthFactor(Number(position.healthFactor) / 1e18)} ({healthStatus})
                       </span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">

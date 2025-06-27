@@ -81,36 +81,36 @@ function HomeContentInner() {
     }
   }, [address, publicClient, chainId, fetchAssetBalances])
 
-  const supportedAssets = [
+  const assets = [
     { 
-      symbol: "USDC", 
-      name: "USD Coin", 
-      icon: "💵", 
-      apy: "4.2%",
+      symbol: 'USDC',
+      name: 'USD Coin',
+      icon: '💵',
+      apy: '4.2%',
       price: prices.USDC?.price || 0n,
       balance: assetBalances.USDC || 0n,
-      borrowed: position?.borrowBalances.USDC || 0n,
-      collateral: position?.collateralBalances.USDC || 0n
+      borrowed: position?.borrowBalances?.USDC || 0n,
+      collateral: position?.collateralBalances?.USDC || 0n
     },
     { 
-      symbol: "WETH", 
-      name: "Wrapped Ether", 
-      icon: "🔶", 
-      apy: "3.8%",
+      symbol: 'WETH',
+      name: 'Wrapped Ethereum',
+      icon: '⚡',
+      apy: '3.8%',
       price: prices.WETH?.price || 0n,
       balance: assetBalances.WETH || 0n,
-      borrowed: position?.borrowBalances.WETH || 0n,
-      collateral: position?.collateralBalances.WETH || 0n
+      borrowed: position?.borrowBalances?.WETH || 0n,
+      collateral: position?.collateralBalances?.WETH || 0n
     },
     { 
-      symbol: "SOL", 
-      name: "Solana", 
-      icon: "🟣", 
-      apy: "5.1%",
+      symbol: 'SOL',
+      name: 'Solana',
+      icon: '🌟',
+      apy: '5.1%',
       price: prices.SOL?.price || 0n,
       balance: assetBalances.SOL || 0n,
-      borrowed: position?.borrowBalances.SOL || 0n,
-      collateral: position?.collateralBalances.SOL || 0n
+      borrowed: position?.borrowBalances?.SOL || 0n,
+      collateral: position?.collateralBalances?.SOL || 0n
     }
   ]
 
@@ -132,10 +132,10 @@ function HomeContentInner() {
     }
   }
 
-  const formatHealthFactor = (healthFactor: bigint) => {
-    const hf = Number(healthFactor) / 1e18
-    if (hf > 999) return '∞'
-    return hf.toFixed(2)
+  const formatHealthFactor = (healthFactor: number) => {
+    if (healthFactor === 0) return '0.00'
+    if (healthFactor > 999) return '∞'
+    return healthFactor.toFixed(2)
   }
 
   const currentChain = CCIP_CONFIG[chainId as keyof typeof CCIP_CONFIG]
@@ -181,7 +181,7 @@ function HomeContentInner() {
           <Card className="bg-gray-900 border border-gray-800 p-6">
             <div className="text-gray-400 text-sm">Health Factor</div>
             <div className={`text-3xl font-bold mt-2 ${getHealthFactorColor(healthStatus)}`}>
-              {position ? formatHealthFactor(position.healthFactor) : '-'}
+              {position ? formatHealthFactor(Number(position.healthFactor) / 1e18) : '-'}
             </div>
             <div className="text-xs text-gray-500 mt-1">
               🛡️ {healthStatus || 'unknown'}
@@ -253,7 +253,7 @@ function HomeContentInner() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
-              {supportedAssets.map((asset) => (
+              {assets.map((asset) => (
                 <div key={asset.symbol} className="flex items-center justify-between p-4 rounded-lg bg-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="text-2xl">{asset.icon}</div>

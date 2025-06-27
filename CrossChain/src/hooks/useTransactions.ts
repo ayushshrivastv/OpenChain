@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseUnits } from 'viem'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient, useWalletClient } from 'wagmi'
+import { parseUnits, formatUnits } from 'viem'
 import { toast } from 'sonner'
-import { CONTRACT_ADDRESSES } from '@/lib/wagmi'
+import { CONTRACT_ADDRESSES, type SupportedChainId } from '@/lib/wagmi'
 import { LENDING_POOL_ABI } from '@/lib/contracts'
 import { CCIP_CONFIG } from '@/lib/chains'
 import { Transaction } from '@/types'
@@ -23,26 +23,122 @@ const estimateCCIPFee = async (
   return parseUnits('0.001', 18)
 }
 
-interface PendingTransaction {
-  id: string
-  action: string
-  asset: string
-  amount: bigint
-  status: 'pending' | 'confirmed' | 'failed'
-  hash?: string
-  sourceChain?: number
-  destChain?: number
-  timestamp: number
-}
-
 export function useTransactions() {
-  const { address } = useAccount()
+  const { address, chainId } = useAccount()
   const { writeContract, data: hash, error: writeError, isPending: isWritePending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash })
+  const publicClient = usePublicClient()
+  const { data: walletClient } = useWalletClient()
   
-  const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([])
+  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([])
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Fetch recent transactions from blockchain events
+  const fetchRecentTransactions = useCallback(async () => {
+    if (!address || !publicClient || !chainId) return
+
+    setIsLoading(true)
+    try {
+      const contractAddress = CONTRACT_ADDRESSES[chainId as SupportedChainId]?.lendingPool
+      if (!contractAddress) return
+
+      // Fetch deposit events
+      const depositLogs = await publicClient.getLogs({
+        address: contractAddress as `0x${string}`,
+        event: {
+          type: 'event',
+          name: 'Deposit',
+          inputs: [
+            { type: 'address', name: 'user', indexed: true },
+            { type: 'address', name: 'asset', indexed: true },
+            { type: 'uint256', name: 'amount' },
+            { type: 'uint64', name: 'chainSelector', indexed: true }
+          ]
+        },
+        fromBlock: 'earliest',
+        args: {
+          user: address
+        }
+      })
+
+      // Fetch borrow events  
+      const borrowLogs = await publicClient.getLogs({
+        address: contractAddress as `0x${string}`,
+        event: {
+          type: 'event',
+          name: 'Borrow',
+          inputs: [
+            { type: 'address', name: 'user', indexed: true },
+            { type: 'address', name: 'asset', indexed: true },
+            { type: 'uint256', name: 'amount' },
+            { type: 'uint64', name: 'destChain', indexed: true },
+            { type: 'bytes32', name: 'ccipMessageId' }
+          ]
+        },
+        fromBlock: 'earliest',
+        args: {
+          user: address
+        }
+      })
+
+      // Convert logs to transactions
+      const transactions: Transaction[] = []
+
+      // Process deposit logs
+      for (const log of depositLogs) {
+        const block = await publicClient.getBlock({ blockHash: log.blockHash })
+        transactions.push({
+          id: `deposit-${log.transactionHash}-${log.logIndex}`,
+          hash: log.transactionHash,
+          action: 'deposit',
+          asset: 'USDC', // TODO: Resolve asset from address
+          amount: log.args.amount as bigint,
+          timestamp: Number(block.timestamp) * 1000,
+          status: 'completed',
+          sourceChain: chainId,
+          ccipMessageId: undefined
+        })
+      }
+
+      // Process borrow logs
+      for (const log of borrowLogs) {
+        const block = await publicClient.getBlock({ blockHash: log.blockHash })
+        transactions.push({
+          id: `borrow-${log.transactionHash}-${log.logIndex}`,
+          hash: log.transactionHash,
+          action: 'borrow',
+          asset: 'USDC', // TODO: Resolve asset from address
+          amount: log.args.amount as bigint,
+          timestamp: Number(block.timestamp) * 1000,
+          status: 'completed',
+          sourceChain: chainId,
+          destChain: Number(log.args.destChain),
+          ccipMessageId: log.args.ccipMessageId as string
+        })
+      }
+
+      // Sort by timestamp (newest first)
+      transactions.sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+      setRecentTransactions(transactions)
+
+    } catch (err) {
+      console.error('Error fetching transactions:', err)
+      setError('Failed to fetch transaction history')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [address, publicClient, chainId])
+
+  // Load recent transactions on mount and address change
+  useEffect(() => {
+    if (address) {
+      fetchRecentTransactions()
+    } else {
+      setRecentTransactions([])
+    }
+  }, [address, fetchRecentTransactions])
 
   // Deposit function - supports cross-chain deposits with Chainlink CCIP
   const deposit = useCallback(async (
@@ -68,8 +164,9 @@ export function useTransactions() {
       const amountBigInt = parseUnits(amount, 18)
       
       // Add to pending transactions
-      const pendingTx: PendingTransaction = {
+      const pendingTx: Transaction = {
         id: txId,
+        hash: '',
         action: destChain && destChain !== sourceChain ? 'depositCrossChain' : 'deposit',
         asset,
         amount: amountBigInt,
@@ -88,7 +185,7 @@ export function useTransactions() {
           throw new Error('Destination chain not supported')
         }
 
-        await writeContract({
+        const { request } = await publicClient!.simulateContract({
           address: contractAddresses.lendingPool as `0x${string}`,
           abi: LENDING_POOL_ABI,
           functionName: 'deposit',
@@ -96,8 +193,25 @@ export function useTransactions() {
             contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
             amountBigInt
           ] as const,
-          // value: asset === 'ETH' ? amountBigInt : 0n // For ETH deposits
+          account: address,
         })
+
+        const hash = await walletClient!.writeContract(request)
+        
+        // Update pending transaction with hash
+        setPendingTransactions(prev => 
+          prev.map(tx => tx.id === txId ? { ...tx, hash } : tx)
+        )
+
+        // Wait for transaction confirmation
+        const receipt = await publicClient!.waitForTransactionReceipt({ hash })
+        
+        // Remove from pending and refresh recent transactions
+        setPendingTransactions(prev => prev.filter(tx => tx.id !== txId))
+        await fetchRecentTransactions()
+
+        toast.success('Deposit transaction submitted')
+        return receipt
       } else {
         // Same-chain deposit
         await writeContract({
@@ -123,7 +237,7 @@ export function useTransactions() {
     } finally {
       setIsLoading(false)
     }
-  }, [address, writeContract])
+  }, [address, writeContract, publicClient, walletClient, fetchRecentTransactions])
 
   // Borrow function - supports cross-chain borrowing with Chainlink CCIP
   const borrow = useCallback(async (
@@ -156,8 +270,9 @@ export function useTransactions() {
       })
 
       // Add to transaction history
-      const transaction: PendingTransaction = {
+      const transaction: Transaction = {
         id: Date.now().toString(),
+        hash: '',
         action: 'borrow',
         asset,
         amount: amountWei,
@@ -210,8 +325,9 @@ export function useTransactions() {
       })
 
       // Add to transaction history
-      const transaction: PendingTransaction = {
+      const transaction: Transaction = {
         id: Date.now().toString(),
+        hash: '',
         action: 'repay',
         asset,
         amount: amountWei,
@@ -264,8 +380,9 @@ export function useTransactions() {
       })
 
       // Add to transaction history
-      const transaction: PendingTransaction = {
+      const transaction: Transaction = {
         id: Date.now().toString(),
+        hash: '',
         action: 'withdraw',
         asset,
         amount: amountWei,
@@ -318,7 +435,7 @@ export function useTransactions() {
       setPendingTransactions(prev => 
         prev.map(tx => 
           tx.hash === hash 
-            ? { ...tx, status: 'confirmed' } 
+            ? { ...tx, status: 'completed' } 
             : tx
         )
       )
@@ -343,7 +460,7 @@ export function useTransactions() {
     const interval = setInterval(() => {
       const oneHourAgo = Date.now() - 60 * 60 * 1000
       setPendingTransactions(prev => 
-        prev.filter(tx => tx.timestamp > oneHourAgo)
+        prev.filter(tx => Number(tx.timestamp) > oneHourAgo)
       )
     }, 60000) // Check every minute
 
@@ -356,9 +473,11 @@ export function useTransactions() {
     repay,
     withdraw,
     pendingTransactions,
+    recentTransactions,
     isLoading: isWritePending || isConfirming,
     error,
-    clearError: () => setError(null)
+    clearError: () => setError(null),
+    refreshTransactions: fetchRecentTransactions
   }
 } 
  

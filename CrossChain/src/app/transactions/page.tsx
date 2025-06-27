@@ -23,35 +23,7 @@ function StatusIndicator({ status }: { status: string }) {
 
 function TransactionsContentInner() {
   const { address } = useAccount()
-  const { pendingTransactions } = useTransactions()
-
-  // Mock recent transactions for demo (in production, fetch from blockchain events)
-  const recentTransactions = [
-    {
-      id: '1',
-      timestamp: '2024-06-26 15:14',
-      action: 'Deposit',
-      sourceChain: 'Ethereum Sepolia',
-      destChain: 'Solana Devnet',
-      asset: 'USDC',
-      amount: BigInt('1000000000000000000'), // 1 USDC
-      status: 'completed',
-      hash: '0x1234567890abcdef1234567890abcdef12345678',
-      ccipMessageId: 'ccip_msg_123'
-    },
-    {
-      id: '2',
-      timestamp: '2024-06-26 14:43',
-      action: 'Borrow',
-      sourceChain: 'Polygon Mumbai',
-      destChain: 'Solana Devnet',
-      asset: 'WETH',
-      amount: BigInt('500000000000000000'), // 0.5 WETH
-      status: 'pending',
-      hash: '0xabcdef1234567890abcdef1234567890abcdef12',
-      ccipMessageId: 'ccip_msg_456'
-    }
-  ]
+  const { pendingTransactions, recentTransactions, isLoading } = useTransactions()
 
   const getExplorerUrl = (hash: string, chain: string) => {
     if (chain.includes('Sepolia')) {
@@ -84,6 +56,12 @@ function TransactionsContentInner() {
 
         {address && (
           <>
+            {isLoading && (
+              <div className="text-center py-8">
+                <p className="text-gray-400">Loading transaction history...</p>
+              </div>
+            )}
+
             {/* Pending Transactions */}
             {pendingTransactions.length > 0 && (
               <div className="mb-6">
@@ -131,7 +109,7 @@ function TransactionsContentInner() {
               </div>
             )}
 
-            {/* Recent Transactions */}
+            {/* Recent Transactions from Blockchain Events */}
             <div>
               <h3 className="text-lg font-medium mb-3">Recent Transactions</h3>
               <div className="overflow-x-auto">
@@ -152,7 +130,7 @@ function TransactionsContentInner() {
                   <tbody>
                     {recentTransactions.map((tx) => (
                       <tr key={tx.id} className="border-b border-gray-800 text-white">
-                        <td className="py-2 px-3">{tx.timestamp}</td>
+                        <td className="py-2 px-3">{new Date(tx.timestamp).toLocaleString()}</td>
                         <td className="py-2 px-3">{tx.action}</td>
                         <td className="py-2 px-3">{tx.sourceChain}</td>
                         <td className="py-2 px-3">{tx.destChain}</td>
@@ -165,7 +143,7 @@ function TransactionsContentInner() {
                         <td className="py-2 px-3">
                           <a 
                             className="text-blue-400 underline" 
-                            href={getExplorerUrl(tx.hash, tx.sourceChain)}
+                            href={getExplorerUrl(tx.hash, tx.sourceChain?.toString() || '')}
                             target="_blank" 
                             rel="noopener noreferrer"
                           >
@@ -173,14 +151,16 @@ function TransactionsContentInner() {
                           </a>
                         </td>
                         <td className="py-2 px-3">
-                          <a 
-                            className="text-yellow-400 underline" 
-                            href={getCCIPExplorerUrl(tx.ccipMessageId)}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                          >
-                            View CCIP
-                          </a>
+                          {tx.ccipMessageId && (
+                            <a 
+                              className="text-yellow-400 underline" 
+                              href={getCCIPExplorerUrl(tx.ccipMessageId)}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              View CCIP
+                            </a>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -189,7 +169,7 @@ function TransactionsContentInner() {
               </div>
             </div>
 
-            {recentTransactions.length === 0 && pendingTransactions.length === 0 && (
+            {!isLoading && recentTransactions.length === 0 && pendingTransactions.length === 0 && (
               <div className="text-center py-8 text-gray-400">
                 <p>No transactions found</p>
                 <p className="text-sm mt-2">Start by making a deposit or borrow to see your transaction history</p>

@@ -39,9 +39,8 @@ export function useUserPosition() {
             priceData[asset] = {
               asset,
               price,
-              decimals: 8, // Chainlink price feeds typically use 8 decimals
               timestamp: Date.now(),
-              isStale
+              confidence: isStale ? 50 : 100 // Lower confidence if stale
             }
           } catch (err) {
             console.warn(`Failed to fetch ${asset} price:`, err)
