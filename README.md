@@ -48,11 +48,10 @@ git clone https://github.com/yourusername/CrossChain.io.git
 cd CrossChain.io
 
 # Install frontend dependencies
-cd CrossChain
 npm install
 
 # Install EVM contract dependencies
-cd ../contracts/evm
+cd contracts/evm
 npm install
 
 # Install Solana program dependencies
@@ -64,7 +63,6 @@ npm install
 
 ```bash
 # Start the frontend development server
-cd CrossChain
 npm run dev
 
 # Compile EVM contracts
@@ -80,14 +78,12 @@ anchor build
 
 ```
 CrossChain.io/
-├── CrossChain/                 # Next.js Frontend Application
-│   ├── src/
-│   │   ├── app/               # App Router pages
-│   │   ├── components/        # React components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── lib/              # Utility libraries
-│   │   └── types/            # TypeScript type definitions
-│   └── package.json
+├── src/                       # Frontend Application (Next.js)
+│   ├── app/                   # App Router pages
+│   ├── components/            # React components
+│   ├── hooks/                # Custom React hooks
+│   ├── lib/                  # Utility libraries
+│   └── types/                # TypeScript type definitions
 ├── contracts/
 │   ├── evm/                  # Ethereum Smart Contracts
 │   │   ├── contracts/        # Solidity contracts
@@ -97,7 +93,11 @@ CrossChain.io/
 │       ├── programs/         # Anchor programs
 │       ├── tests/            # Program tests
 │       └── types/            # TypeScript definitions
-└── docs/                     # Comprehensive documentation
+├── docs/                     # Comprehensive documentation
+├── package.json              # Frontend dependencies
+├── next.config.js            # Next.js configuration
+├── tailwind.config.ts        # Tailwind CSS configuration
+└── tsconfig.json             # TypeScript configuration
 ```
 
 ## 🔧 Smart Contracts
@@ -153,7 +153,6 @@ cd contracts/solana
 anchor deploy --provider.cluster devnet
 
 # Build and deploy frontend
-cd CrossChain
 npm run build
 npm run start
 ```
@@ -162,7 +161,6 @@ npm run start
 
 ```bash
 # Run frontend tests
-cd CrossChain
 npm run test
 
 # Run contract tests
@@ -180,7 +178,7 @@ anchor test
 - [**Security Analysis**](./CHAINLINK_SECURITY_ANALYSIS.md) - Security audit and recommendations
 - [**Testnet Readiness**](./COMPREHENSIVE_TESTNET_READINESS_ANALYSIS.md) - Deployment readiness assessment
 - [**Final Status**](./FINAL_PROJECT_STATUS_ANALYSIS.md) - Complete project status
-- [**Frontend Guide**](./CrossChain/README.md) - Frontend development guide
+- [**Frontend Guide**](./src/README.md) - Frontend development guide
 - [**Contract Guide**](./contracts/evm/README.md) - Smart contract documentation
 - [**Solana Guide**](./contracts/solana/README.md) - Solana program documentation
 

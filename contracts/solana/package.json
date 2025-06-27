@@ -21,11 +21,11 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.29.0",
-    "@solana/web3.js": "^1.91.0",
+    "@coral-xyz/anchor": "^0.31.1",
     "@solana/spl-token": "^0.4.0",
-    "borsh": "^0.7.0",
+    "@solana/web3.js": "^1.91.0",
     "bn.js": "^5.2.1",
+    "borsh": "^0.7.0",
     "bs58": "^5.0.0"
   },
   "devDependencies": {
@@ -61,4 +61,4 @@
   "engines": {
     "node": ">=18.0.0"
   }
-} 
+}

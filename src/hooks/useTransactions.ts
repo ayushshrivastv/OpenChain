@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { CONTRACT_ADDRESSES, type SupportedChainId } from '@/lib/wagmi'
 import { LENDING_POOL_ABI } from '@/lib/contracts'
 import { CCIP_CONFIG } from '@/lib/chains'
-import { Transaction } from '@/types'
+import type { Transaction } from '@/types'
 
 // Helper function to get contract addresses for a chain
 const getContractAddresses = (chainId: number) => {
@@ -185,7 +185,11 @@ export function useTransactions() {
           throw new Error('Destination chain not supported')
         }
 
-        const { request } = await publicClient!.simulateContract({
+        if (!publicClient || !walletClient) {
+          throw new Error('Client not available')
+        }
+
+        const { request } = await publicClient.simulateContract({
           address: contractAddresses.lendingPool as `0x${string}`,
           abi: LENDING_POOL_ABI,
           functionName: 'deposit',
@@ -196,7 +200,7 @@ export function useTransactions() {
           account: address,
         })
 
-        const hash = await walletClient!.writeContract(request)
+        const hash = await walletClient.writeContract(request)
         
         // Update pending transaction with hash
         setPendingTransactions(prev => 
@@ -204,7 +208,7 @@ export function useTransactions() {
         )
 
         // Wait for transaction confirmation
-        const receipt = await publicClient!.waitForTransactionReceipt({ hash })
+        const receipt = await publicClient.waitForTransactionReceipt({ hash })
         
         // Remove from pending and refresh recent transactions
         setPendingTransactions(prev => prev.filter(tx => tx.id !== txId))
@@ -212,19 +216,19 @@ export function useTransactions() {
 
         toast.success('Deposit transaction submitted')
         return receipt
-      } else {
-        // Same-chain deposit
-        await writeContract({
-          address: contractAddresses.lendingPool as `0x${string}`,
-          abi: LENDING_POOL_ABI,
-          functionName: 'deposit',
-          args: [
-            contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
-            amountBigInt
-          ] as const,
-          // value: asset === 'ETH' ? amountBigInt : 0n
-        })
       }
+      
+      // Same-chain deposit
+      await writeContract({
+        address: contractAddresses.lendingPool as `0x${string}`,
+        abi: LENDING_POOL_ABI,
+        functionName: 'deposit',
+        args: [
+          contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets] as `0x${string}`,
+          amountBigInt
+        ] as const,
+        // value: asset === 'ETH' ? amountBigInt : 0n
+      })
 
       toast.success('Deposit transaction submitted')
     } catch (err) {

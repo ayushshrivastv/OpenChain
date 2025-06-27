@@ -4,42 +4,42 @@ const path = require('path')
 async function main() {
   console.log('🔄 UPDATING FRONTEND CONTRACT ADDRESSES')
   console.log('=======================================')
-  
+
   // Read deployment files
   const deploymentsDir = './deployments'
-  const frontendConfigPath = '../../CrossChain/src/lib/wagmi.ts'
-  
+  const frontendConfigPath = '../../src/lib/wagmi.ts'
+
   if (!fs.existsSync(deploymentsDir)) {
     console.error('❌ Deployments directory not found!')
     console.error('   Run deployment first: npm run deploy:sepolia')
     process.exit(1)
   }
-  
+
   const deploymentFiles = fs.readdirSync(deploymentsDir)
     .filter(file => file.endsWith('.json'))
-  
+
   if (deploymentFiles.length === 0) {
     console.error('❌ No deployment files found!')
     console.error('   Run deployment first: npm run deploy:sepolia')
     process.exit(1)
   }
-  
+
   console.log(`📁 Found ${deploymentFiles.length} deployment file(s):`)
   deploymentFiles.forEach(file => console.log(`   • ${file}`))
-  
+
   // Parse deployment data
   const deployments = {}
-  
+
   for (const file of deploymentFiles) {
     const filePath = path.join(deploymentsDir, file)
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
     deployments[data.chainId] = data
     console.log(`✅ Loaded deployment for chain ${data.chainId} (${data.network})`)
   }
-  
+
   // Generate new wagmi.ts content
   const wagmiContent = generateWagmiConfig(deployments)
-  
+
   // Write to frontend
   if (fs.existsSync(frontendConfigPath)) {
     // Backup existing file
@@ -47,14 +47,14 @@ async function main() {
     fs.copyFileSync(frontendConfigPath, backupPath)
     console.log(`📋 Backed up existing config to: ${backupPath}`)
   }
-  
+
   fs.writeFileSync(frontendConfigPath, wagmiContent)
   console.log(`✅ Updated frontend config: ${frontendConfigPath}`)
-  
+
   console.log('\\n🎉 FRONTEND UPDATE COMPLETED!')
   console.log('==============================')
   console.log('📋 Updated contract addresses:')
-  
+
   Object.entries(deployments).forEach(([chainId, deployment]) => {
     console.log(`\\n📡 ${deployment.network} (${chainId}):`)
     Object.entries(deployment.contracts).forEach(([name, address]) => {
@@ -68,9 +68,9 @@ async function main() {
       }
     })
   })
-  
+
   console.log('\\n🚀 NEXT STEPS:')
-  console.log('1. cd ../../CrossChain')
+  console.log('1. cd ../..')
   console.log('2. npm run build')
   console.log('3. Test the frontend with real contracts!')
 }
@@ -133,4 +133,4 @@ main()
   .catch((error) => {
     console.error('❌ Frontend update failed:', error)
     process.exit(1)
-  }) 
+  })

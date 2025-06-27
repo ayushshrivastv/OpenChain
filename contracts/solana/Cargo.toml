@@ -1,8 +1,8 @@
 [workspace]
-resolver = "2"
 members = [
     "programs/*"
 ]
+resolver = "2"
 
 [workspace.dependencies]
 anchor-lang = "0.30.1"

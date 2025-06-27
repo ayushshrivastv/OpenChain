@@ -1,3 +1,148 @@
+import type { Address } from 'viem'
+
+// 🌐 Network Configuration
+export const SUPPORTED_CHAINS = {
+  sepolia: 11155111,
+  mumbai: 80001,
+  solana: 'devnet'
+} as const
+
+export type SupportedChainId = typeof SUPPORTED_CHAINS[keyof typeof SUPPORTED_CHAINS]
+
+// 🔗 Official Chainlink CCIP Configuration (REAL TESTNET ADDRESSES)
+export const CCIP_CONFIG = {
+  [SUPPORTED_CHAINS.sepolia]: {
+    name: 'Ethereum Sepolia',
+    rpcUrl: 'https://ethereum-sepolia.publicnode.com',
+    router: '0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59' as Address,
+    linkToken: '0x779877A7B0D9E8603169DdbD7836e478b4624789' as Address,
+    chainSelector: '16015286601757825753',
+    nativeCurrency: 'ETH',
+    blockExplorer: 'https://sepolia.etherscan.io',
+    faucets: [
+      'https://sepoliafaucet.com/',
+      'https://faucets.chain.link/'
+    ]
+  },
+  [SUPPORTED_CHAINS.mumbai]: {
+    name: 'Polygon Mumbai',
+    rpcUrl: 'https://polygon-mumbai.gateway.tenderly.co',
+    router: '0x1035CabC275068e0F4b745A29CEDf38E13aF41b1' as Address,
+    linkToken: '0x326C977E6efc84E512bB9C30f76E30c160eD06FB' as Address,
+    chainSelector: '12532609583862916517',
+    nativeCurrency: 'MATIC',
+    blockExplorer: 'https://mumbai.polygonscan.com',
+    faucets: [
+      'https://faucet.polygon.technology/',
+      'https://faucets.chain.link/'
+    ]
+  }
+} as const
+
+// 📋 Contract Addresses - Updated via deployment
+export interface DeployedContracts {
+  lendingPool: Address
+  priceFeed: Address
+  permissions: Address
+  rateLimiter: Address
+  liquidationManager: Address
+  synthUSDC: Address
+  synthWETH: Address
+  ccipRouter: Address
+  linkToken: Address
+}
+
+// 🏗️ Contract addresses will be populated after deployment
+// This is a placeholder structure - real addresses injected via deployment script
+export const CONTRACT_ADDRESSES: Record<number, DeployedContracts> = {
+  // Sepolia contracts - to be populated by deployment
+  [SUPPORTED_CHAINS.sepolia]: {
+    lendingPool: '0x0000000000000000000000000000000000000000' as Address,
+    priceFeed: '0x0000000000000000000000000000000000000000' as Address,
+    permissions: '0x0000000000000000000000000000000000000000' as Address,
+    rateLimiter: '0x0000000000000000000000000000000000000000' as Address,
+    liquidationManager: '0x0000000000000000000000000000000000000000' as Address,
+    synthUSDC: '0x0000000000000000000000000000000000000000' as Address,
+    synthWETH: '0x0000000000000000000000000000000000000000' as Address,
+    ccipRouter: CCIP_CONFIG[SUPPORTED_CHAINS.sepolia].router,
+    linkToken: CCIP_CONFIG[SUPPORTED_CHAINS.sepolia].linkToken
+  },
+  
+  // Mumbai contracts - to be populated by deployment
+  [SUPPORTED_CHAINS.mumbai]: {
+    lendingPool: '0x0000000000000000000000000000000000000000' as Address,
+    priceFeed: '0x0000000000000000000000000000000000000000' as Address,
+    permissions: '0x0000000000000000000000000000000000000000' as Address,
+    rateLimiter: '0x0000000000000000000000000000000000000000' as Address,
+    liquidationManager: '0x0000000000000000000000000000000000000000' as Address,
+    synthUSDC: '0x0000000000000000000000000000000000000000' as Address,
+    synthWETH: '0x0000000000000000000000000000000000000000' as Address,
+    ccipRouter: CCIP_CONFIG[SUPPORTED_CHAINS.mumbai].router,
+    linkToken: CCIP_CONFIG[SUPPORTED_CHAINS.mumbai].linkToken
+  }
+}
+
+// 🔍 Utility functions
+export function getContractAddresses(chainId: number): DeployedContracts | null {
+  return CONTRACT_ADDRESSES[chainId] || null
+}
+
+export function getCCIPConfig(chainId: number) {
+  return CCIP_CONFIG[chainId as keyof typeof CCIP_CONFIG] || null
+}
+
+export function isChainSupported(chainId: number): boolean {
+  return Object.values(SUPPORTED_CHAINS).includes(chainId as SupportedChainId)
+}
+
+// 💰 Asset Configuration
+export const SUPPORTED_ASSETS = {
+  USDC: {
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+    isCollateral: true
+  },
+  WETH: {
+    symbol: 'WETH', 
+    name: 'Wrapped Ethereum',
+    decimals: 18,
+    isCollateral: true
+  },
+  sUSDC: {
+    symbol: 'sUSDC',
+    name: 'Synthetic USDC',
+    decimals: 6,
+    isCollateral: false
+  },
+  sWETH: {
+    symbol: 'sWETH',
+    name: 'Synthetic WETH', 
+    decimals: 18,
+    isCollateral: false
+  }
+} as const
+
+// 🚨 Validation helpers
+export function validateDeployment(): boolean {
+  for (const [chainId, contracts] of Object.entries(CONTRACT_ADDRESSES)) {
+    const zeroAddress = '0x0000000000000000000000000000000000000000'
+    
+    // Check if core contracts are deployed (not zero address)
+    if (contracts.lendingPool === zeroAddress) {
+      console.warn(`⚠️ LendingPool not deployed on chain ${chainId}`)
+      return false
+    }
+  }
+  return true
+}
+
+// 🔄 Dynamic config update (called by deployment script)
+export function updateContractAddresses(chainId: number, contracts: DeployedContracts) {
+  CONTRACT_ADDRESSES[chainId] = contracts
+  console.log(`✅ Updated contract addresses for chain ${chainId}`)
+}
+
 // Contract ABIs - Essential functions for the DeFi protocol
 export const LENDING_POOL_ABI = [
   // Core lending functions

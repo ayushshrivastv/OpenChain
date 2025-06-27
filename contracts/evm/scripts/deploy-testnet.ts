@@ -273,7 +273,7 @@ async function main() {
       },
     };
     
-    const frontendConfigFile = `../../CrossChain/src/config/${networkName}-contracts.json`;
+    const frontendConfigFile = `../../src/config/${networkName}-contracts.json`;
     writeFileSync(frontendConfigFile, JSON.stringify(frontendConfig, null, 2));
     console.log(`🎨 Frontend config saved to: ${frontendConfigFile}`);
     

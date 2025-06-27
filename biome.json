@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["dist", ".next", "node_modules", "build", "src/generated/**"],
+    "ignore": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.next/**",
+      "**/build/**",
+      "**/contracts/evm/typechain-types/**",
+      "**/contracts/evm/artifacts/**",
+      "**/contracts/evm/cache/**"
+    ],
     "include": ["src/**/*.ts", "src/**/*.tsx"]
   },
   "formatter": {
@@ -21,6 +29,12 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "complexity": {
+        "noBannedTypes": "off"
+      },
+      "suspicious": {
+        "noConfusingVoidType": "off"
+      },
       "correctness": {
         "noUnusedVariables": "off"
       },

@@ -34,7 +34,7 @@ print_info() {
 }
 
 # Check if we're in the right directory
-if [ ! -f "package.json" ] || [ ! -d "CrossChain" ] || [ ! -d "contracts" ]; then
+if [ ! -f "package.json" ] || [ ! -d "src" ] || [ ! -d "contracts" ]; then
     print_error "Please run this script from the CrossChain.io project root directory"
     exit 1
 fi
@@ -131,7 +131,7 @@ echo ""
 echo "🏗️ PHASE 5: FRONTEND BUILD TEST"
 echo "==============================="
 
-cd ../../CrossChain
+cd ../..
 
 print_info "Testing frontend build with live contracts..."
 npm run build || {

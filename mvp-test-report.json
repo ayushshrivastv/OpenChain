@@ -1,0 +1,126 @@
+{
+  "timestamp": "2025-06-27T07:00:41.402Z",
+  "duration": "18.23s",
+  "summary": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "percentage": "100.0%"
+  },
+  "categories": {
+    "frontend": {
+      "passed": 5,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "TypeScript Compilation",
+          "status": "PASSED"
+        },
+        {
+          "name": "Lint Validation",
+          "status": "PASSED"
+        },
+        {
+          "name": "Next.js Static Export",
+          "status": "PASSED"
+        },
+        {
+          "name": "Essential Pages Check",
+          "status": "PASSED"
+        },
+        {
+          "name": "Contract Configuration",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "contracts": {
+      "passed": 5,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "Hardhat Configuration",
+          "status": "PASSED"
+        },
+        {
+          "name": "Contract Compilation",
+          "status": "PASSED"
+        },
+        {
+          "name": "Contract Files Present",
+          "status": "PASSED"
+        },
+        {
+          "name": "Chainlink Dependencies",
+          "status": "PASSED"
+        },
+        {
+          "name": "Deployment Script Ready",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "deployment": {
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "Environment Template",
+          "status": "PASSED"
+        },
+        {
+          "name": "CCIP Router Addresses",
+          "status": "PASSED"
+        },
+        {
+          "name": "No Mock Data Check",
+          "status": "PASSED"
+        },
+        {
+          "name": "Package Dependencies",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "solana": {
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "Anchor Configuration",
+          "status": "PASSED"
+        },
+        {
+          "name": "Rust Program Present",
+          "status": "PASSED"
+        },
+        {
+          "name": "Cargo Configuration",
+          "status": "PASSED"
+        },
+        {
+          "name": "Anchor Build Test",
+          "status": "PASSED"
+        }
+      ]
+    },
+    "integration": {
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "Config Export Check",
+          "status": "PASSED"
+        },
+        {
+          "name": "Chain Support Validation",
+          "status": "PASSED"
+        },
+        {
+          "name": "Build Output Validation",
+          "status": "PASSED"
+        }
+      ]
+    }
+  }
+}

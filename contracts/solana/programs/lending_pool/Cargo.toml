@@ -1,7 +1,7 @@
 [package]
 name = "lending_pool"
 version = "0.1.0"
-description = "Cross-chain DeFi lending and borrowing protocol on Solana"
+description = "Cross-chain lending pool program"
 edition = "2021"
 license = "MIT"
 authors = ["Cross-Chain DeFi Team"]
@@ -22,8 +22,8 @@ test-sbf = []
 
 [dependencies]
 # Core Anchor dependencies - using workspace versions
-anchor-lang = { workspace = true, features = ["init-if-needed"] }
-anchor-spl = { workspace = true }
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
 
 # Solana dependencies - using workspace versions
 solana-program = { workspace = true }

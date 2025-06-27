@@ -1,18 +1,18 @@
 [toolchain]
-anchor_version = "0.30.1"
+anchor_version = "0.31.1"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.devnet]
-lending_pool = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkgAGF4d8CLQN"
+lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 
 [programs.mainnet]
-lending_pool = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkgAGF4d8CLQN"
+lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 
 [programs.testnet]
-lending_pool = "B4fgxNzFf99tkCGZ5sGEto4eBqP9JyEN9CRoyTVPMU9k"
+lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 
 [registry]
 url = "https://api.apr.dev"
