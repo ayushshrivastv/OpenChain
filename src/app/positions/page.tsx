@@ -150,21 +150,26 @@ function PositionsContentInner() {
       const positionsArray = Array.from(positionMap.values())
       for (const position of positionsArray) {
         if (position.borrowAmount > 0n) {
-          // Get real price from Chainlink price feeds
+          // Get real price from Chainlink price feeds (only for EVM chains)
           try {
-            const collateralPrice = await publicClient?.readContract({
-              address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
-              abi: CHAINLINK_PRICE_FEED_ABI,
-              functionName: 'getPrice',
-              args: [position.asset as `0x${string}`]
-            }) as [bigint, boolean] | undefined
+            let collateralPrice: [bigint, boolean] | undefined
+            let borrowPrice: [bigint, boolean] | undefined
 
-            const borrowPrice = await publicClient?.readContract({
-              address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
-              abi: CHAINLINK_PRICE_FEED_ABI,
-              functionName: 'getPrice',
-              args: [position.asset as `0x${string}`]
-            }) as [bigint, boolean] | undefined
+            if ('chainlinkPriceFeed' in contractAddresses) {
+              collateralPrice = await publicClient?.readContract({
+                address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
+                abi: CHAINLINK_PRICE_FEED_ABI,
+                functionName: 'getPrice',
+                args: [position.asset as `0x${string}`]
+              }) as [bigint, boolean] | undefined
+
+              borrowPrice = await publicClient?.readContract({
+                address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
+                abi: CHAINLINK_PRICE_FEED_ABI,
+                functionName: 'getPrice',
+                args: [position.asset as `0x${string}`]
+              }) as [bigint, boolean] | undefined
+            }
 
             if (collateralPrice && borrowPrice) {
               const collateralValue = Number(formatUnits(position.collateralAmount, 18)) * Number(formatUnits(collateralPrice[0], 8))

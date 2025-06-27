@@ -118,6 +118,26 @@ export const SOLANA_CONFIG = {
   programId: 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkgAGF4d8CLQN',
 } as const
 
+// Solana Devnet Configuration
+export const solanaDevnet = {
+  id: 'solana-devnet',
+  name: 'Solana Devnet',
+  network: 'devnet',
+  nativeCurrency: {
+    decimals: 9,
+    name: 'SOL',
+    symbol: 'SOL',
+  },
+  rpcUrls: {
+    default: { http: ['https://api.devnet.solana.com'] },
+    public: { http: ['https://api.devnet.solana.com'] },
+  },
+  blockExplorers: {
+    default: { name: 'Solana Explorer', url: 'https://explorer.solana.com' },
+  },
+  testnet: true,
+} as const
+
 // Contract addresses for each chain (will be updated after deployment)
 export const CONTRACT_ADDRESSES = {
   [sepoliaTestnet.id]: {

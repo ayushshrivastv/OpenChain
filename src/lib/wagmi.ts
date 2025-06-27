@@ -35,6 +35,13 @@ export const CONTRACT_ADDRESSES = {
     syntheticAssets: {
       USDC: '0x7b0d1FCC2e4839Ae10a7F936bB2FFd411237068e'
     },
+  },
+  'solana-devnet': { // Solana Devnet
+    lendingPool: 'B8JTZB6QcHxgBZQd185vkF8JPv8Yb7FjoRhww9f9rDGf',
+    programId: 'B8JTZB6QcHxgBZQd185vkF8JPv8Yb7FjoRhww9f9rDGf',
+    network: 'devnet',
+    rpcUrl: 'https://api.devnet.solana.com',
+    cluster: 'devnet'
   }
 } as const
 

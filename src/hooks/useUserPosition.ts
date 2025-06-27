@@ -25,25 +25,28 @@ export function useUserPosition() {
       const assets = ['USDC', 'WETH', 'SOL']
       const priceData: Record<string, PriceData> = {}
 
-      for (const asset of assets) {
-        const assetAddress = contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets]
-        if (assetAddress) {
-          try {
-            const [price, isStale] = await publicClient.readContract({
-              address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
-              abi: CHAINLINK_PRICE_FEED_ABI,
-              functionName: 'getSafePrice',
-              args: [assetAddress]
-            }) as [bigint, boolean]
+      // Only fetch prices for EVM chains with syntheticAssets
+      if ('syntheticAssets' in contractAddresses) {
+        for (const asset of assets) {
+          const assetAddress = contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets]
+          if (assetAddress) {
+            try {
+              const [price, isStale] = await publicClient.readContract({
+                address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
+                abi: CHAINLINK_PRICE_FEED_ABI,
+                functionName: 'getSafePrice',
+                args: [assetAddress]
+              }) as [bigint, boolean]
 
-            priceData[asset] = {
-              asset,
-              price,
-              timestamp: Date.now(),
-              confidence: isStale ? 50 : 100 // Lower confidence if stale
+              priceData[asset] = {
+                asset,
+                price,
+                timestamp: Date.now(),
+                confidence: isStale ? 50 : 100 // Lower confidence if stale
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch ${asset} price:`, err)
             }
-          } catch (err) {
-            console.warn(`Failed to fetch ${asset} price:`, err)
           }
         }
       }
@@ -83,27 +86,29 @@ export function useUserPosition() {
       // For each asset, get detailed asset information and calculate individual balances
       // Since we have totalCollateralValue and totalBorrowValue, we'll distribute them
       // proportionally based on asset prices (this is a simplified approach)
-      for (const asset of supportedAssets) {
-        const assetAddress = contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets]
-        if (assetAddress) {
-          try {
-            // Get asset configuration from the lending pool
-            const assetInfo = await publicClient.readContract({
-              address: contractAddresses.lendingPool as `0x${string}`,
-              abi: LENDING_POOL_ABI,
-              functionName: 'supportedAssets',
-              args: [assetAddress]
-            }) as [string, string, string, bigint, bigint, bigint, boolean, boolean, boolean]
+      if ('syntheticAssets' in contractAddresses) {
+        for (const asset of supportedAssets) {
+          const assetAddress = contractAddresses.syntheticAssets[asset as keyof typeof contractAddresses.syntheticAssets]
+          if (assetAddress) {
+            try {
+              // Get asset configuration from the lending pool
+              const assetInfo = await publicClient.readContract({
+                address: contractAddresses.lendingPool as `0x${string}`,
+                abi: LENDING_POOL_ABI,
+                functionName: 'supportedAssets',
+                args: [assetAddress]
+              }) as [string, string, string, bigint, bigint, bigint, boolean, boolean, boolean]
 
-            // For now, we'll set individual balances to 0 and rely on the total values
-            // In a full implementation, you would need specific functions to get per-asset balances
-            // or store this data in events/logs
-            collateralBalances[asset] = 0n
-            borrowBalances[asset] = 0n
-          } catch (err) {
-            console.warn(`Failed to fetch ${asset} info:`, err)
-            collateralBalances[asset] = 0n
-            borrowBalances[asset] = 0n
+              // For now, we'll set individual balances to 0 and rely on the total values
+              // In a full implementation, you would need specific functions to get per-asset balances
+              // or store this data in events/logs
+              collateralBalances[asset] = 0n
+              borrowBalances[asset] = 0n
+            } catch (err) {
+              console.warn(`Failed to fetch ${asset} info:`, err)
+              collateralBalances[asset] = 0n
+              borrowBalances[asset] = 0n
+            }
           }
         }
       }

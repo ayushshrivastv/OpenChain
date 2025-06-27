@@ -50,20 +50,22 @@ function HomeContentInner() {
     try {
       const balances: Record<string, bigint> = {}
       
-      // Fetch balances for each supported asset
-      for (const [symbol, assetAddress] of Object.entries(contractAddresses.syntheticAssets)) {
-        try {
-          const balance = await publicClient.readContract({
-            address: assetAddress as `0x${string}`,
-            abi: ERC20_ABI,
-            functionName: 'balanceOf',
-            args: [address]
-          }) as bigint
+      // Fetch balances for each supported asset (only for EVM chains)
+      if ('syntheticAssets' in contractAddresses) {
+        for (const [symbol, assetAddress] of Object.entries(contractAddresses.syntheticAssets)) {
+          try {
+            const balance = await publicClient.readContract({
+              address: assetAddress as `0x${string}`,
+              abi: ERC20_ABI,
+              functionName: 'balanceOf',
+              args: [address]
+            }) as bigint
 
-          balances[symbol] = balance
-        } catch (error) {
-          console.warn(`Failed to fetch ${symbol} balance:`, error)
-          balances[symbol] = 0n
+            balances[symbol] = balance
+          } catch (error) {
+            console.warn(`Failed to fetch ${symbol} balance:`, error)
+            balances[symbol] = 0n
+          }
         }
       }
 

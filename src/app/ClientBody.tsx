@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { WagmiProvider } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import { wagmiConfig } from '@/lib/wagmi'
+import '@rainbow-me/rainbowkit/styles.css'
+
+const queryClient = new QueryClient()
 
 export default function ClientBody({
   children,
@@ -13,5 +20,13 @@ export default function ClientBody({
     document.body.className = "antialiased";
   }, []);
 
-  return <div className="antialiased">{children}</div>;
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          <div className="antialiased">{children}</div>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
 }

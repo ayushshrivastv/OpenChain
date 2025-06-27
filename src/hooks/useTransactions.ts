@@ -189,6 +189,11 @@ export function useTransactions() {
           throw new Error('Client not available')
         }
 
+        // Only proceed if this is an EVM chain with syntheticAssets
+        if (!('syntheticAssets' in contractAddresses)) {
+          throw new Error('Cross-chain deposits not supported for this chain type')
+        }
+
         const { request } = await publicClient.simulateContract({
           address: contractAddresses.lendingPool as `0x${string}`,
           abi: LENDING_POOL_ABI,
@@ -218,7 +223,11 @@ export function useTransactions() {
         return receipt
       }
       
-        // Same-chain deposit
+        // Same-chain deposit (only for EVM chains)
+        if (!('syntheticAssets' in contractAddresses)) {
+          throw new Error('Same-chain deposits not supported for this chain type')
+        }
+
         await writeContract({
           address: contractAddresses.lendingPool as `0x${string}`,
           abi: LENDING_POOL_ABI,

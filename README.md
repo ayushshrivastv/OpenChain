@@ -14,6 +14,13 @@ A decentralized cross-chain lending and borrowing protocol built with Chainlink 
 - **Deployment Date**: June 27, 2025
 - **Status**: 🟢 **ACTIVE**
 
+### ✅ **Solana Devnet (LIVE)**
+- **Network**: Solana Devnet
+- **Program ID**: `B8JTZB6QcHxgBZQd185vkF8JPv8Yb7FjoRhww9f9rDGf`
+- **Deployment Date**: June 27, 2025
+- **Status**: 🟢 **ACTIVE**
+- **Explorer**: [View on Solana Explorer](https://explorer.solana.com/address/B8JTZB6QcHxgBZQd185vkF8JPv8Yb7FjoRhww9f9rDGf?cluster=devnet)
+
 #### 📋 **Contract Addresses**
 ```
 LendingPool:        0xDD5c505d69703230CFFfA1307753923302CEb586

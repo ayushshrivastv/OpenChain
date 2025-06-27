@@ -22,6 +22,13 @@ const config: HardhatUserConfig = {
       gasPrice: 20000000000, // 20 gwei
       timeout: 60000, // 60 seconds
     },
+    amoy: {
+      url: process.env.AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 80002,
+      gasPrice: 30000000000, // 30 gwei
+      timeout: 60000, // 60 seconds
+    },
     mumbai: {
       url: process.env.MUMBAI_RPC_URL || "https://polygon-mumbai.g.alchemy.com/v2/demo",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],

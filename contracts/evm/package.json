@@ -6,8 +6,10 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
+    "deploy": "npx hardhat run scripts/deploy.js",
     "deploy:sepolia": "npx hardhat run scripts/deploy-testnet.js --network sepolia",
     "deploy:mumbai": "npx hardhat run scripts/deploy-testnet.js --network mumbai",
+    "deploy:amoy": "npx hardhat run scripts/deploy-testnet.js --network amoy",
     "check:sepolia": "npx hardhat run scripts/check-balance.js --network sepolia",
     "check:mumbai": "npx hardhat run scripts/check-balance.js --network mumbai",
     "update-frontend": "node scripts/update-frontend.js",
