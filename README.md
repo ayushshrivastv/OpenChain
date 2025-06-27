@@ -212,7 +212,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **Chainlink**: For providing robust oracle infrastructure
-- **OpenZeppelin**: For battle-tested smart contract libraries  
+- **OpenZeppelin**: For battle-tested smart contract libraries
 - **Solana Foundation**: For the high-performance blockchain platform
 - **Next.js Team**: For the excellent React framework
 
@@ -240,4 +240,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for the DeFi community**
 
-*CrossChain.io - Bridging the future of decentralized finance* 
+*CrossChain.io - Bridging the future of decentralized finance*
