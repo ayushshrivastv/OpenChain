@@ -7,7 +7,7 @@ export const wagmiConfig = getDefaultConfig({
     process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
     "crosschain-defi-protocol",
   chains: [sepoliaTestnet, polygonMumbai],
-  ssr: true, // Next.js SSR support
+  ssr: false, // Next.js SSR support
 });
 
 // 🚀 LIVE TESTNET CONTRACT ADDRESSES

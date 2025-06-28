@@ -203,6 +203,19 @@ export const LENDING_POOL_ABI = [
     ],
   },
   {
+    name: "getUserAssetBalance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "user", type: "address" },
+      { name: "asset", type: "address" },
+    ],
+    outputs: [
+      { name: "collateralBalance", type: "uint256" },
+      { name: "borrowBalance", type: "uint256" },
+    ],
+  },
+  {
     name: "getAssetPrice",
     type: "function",
     stateMutability: "view",

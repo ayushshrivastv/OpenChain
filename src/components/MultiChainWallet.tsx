@@ -3,8 +3,16 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useState } from "react";
-import { WalletConnector } from "./WalletConnector";
 import { Button } from "./ui/button";
+import dynamic from "next/dynamic";
+
+const WalletConnector = dynamic(
+  () => import("./WalletConnector").then((mod) => mod.WalletConnector),
+  {
+    ssr: false,
+    loading: () => <div className="w-48 h-10 bg-gray-800 rounded-lg animate-pulse" />,
+  },
+);
 
 export function MultiChainWallet() {
   const [activeChain, setActiveChain] = useState<"ethereum" | "solana">(

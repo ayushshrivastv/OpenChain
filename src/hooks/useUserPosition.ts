@@ -101,28 +101,15 @@ export function useUserPosition() {
           if (assetAddress) {
             try {
               // Get asset configuration from the lending pool
-              const assetInfo = (await publicClient.readContract({
+              const [collateral, borrowed] = (await publicClient.readContract({
                 address: contractAddresses.lendingPool as `0x${string}`,
                 abi: LENDING_POOL_ABI,
-                functionName: "supportedAssets",
-                args: [assetAddress],
-              })) as [
-                string,
-                string,
-                string,
-                bigint,
-                bigint,
-                bigint,
-                boolean,
-                boolean,
-                boolean,
-              ];
+                functionName: "getUserAssetBalance",
+                args: [address, assetAddress],
+              })) as [bigint, bigint];
 
-              // For now, we'll set individual balances to 0 and rely on the total values
-              // In a full implementation, you would need specific functions to get per-asset balances
-              // or store this data in events/logs
-              collateralBalances[asset] = 0n;
-              borrowBalances[asset] = 0n;
+              collateralBalances[asset] = collateral;
+              borrowBalances[asset] = borrowed;
             } catch (err) {
               console.warn(`Failed to fetch ${asset} info:`, err);
               collateralBalances[asset] = 0n;

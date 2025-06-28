@@ -12,13 +12,13 @@ lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 
 [programs.testnet]
-lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
+lending_pool = "6fTsayR6dMoWFbpQ2HB4xRJPiBTPhNUEWCiDBpz3BRAm"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Devnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
