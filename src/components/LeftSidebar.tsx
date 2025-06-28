@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { X } from "lucide-react";
 
 const navigationItems = [
   { name: "Dashboard", href: "/" },
@@ -11,7 +13,12 @@ const navigationItems = [
   { name: "News", href: "/news" },
 ];
 
-export function LeftSidebar() {
+interface LeftSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function LeftSidebar({ isOpen, onClose }: LeftSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -22,9 +29,26 @@ export function LeftSidebar() {
 
   return (
     <>
-      <div className="fixed left-0 top-0 h-full w-48 py-6 px-4 bg-black flex flex-col">
-        <div className="flex items-center justify-center mb-8 px-2">
-          <img src="/OpenChain_logo.png" alt="OpenChain Logo" className="h-10 w-auto" />
+      {/* Overlay for mobile */}
+      <div 
+        className={cn(
+          "fixed inset-0 bg-black/60 z-40 lg:hidden",
+          isOpen ? "block" : "hidden"
+        )}
+        onClick={onClose}
+      ></div>
+
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed left-0 top-0 h-full w-60 py-6 px-4 bg-black flex flex-col transition-transform duration-300 ease-in-out z-50",
+        "lg:translate-x-0 lg:w-48",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex items-center justify-between lg:justify-center mb-8 px-2">
+          <Image src="/OpenChain_logo.png" alt="OpenChain Logo" width={40} height={40} className="h-10 w-auto" />
+          <button onClick={onClose} className="lg:hidden text-white p-2 -mr-2">
+            <X size={24} />
+          </button>
         </div>
         <nav className="flex-1">
           <ul className="space-y-0.5">
