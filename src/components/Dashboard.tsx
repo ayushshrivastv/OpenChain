@@ -4,6 +4,7 @@ import { useUserPosition } from "@/hooks/useUserPosition";
 import { formatUnits } from "viem";
 import Image from "next/image";
 import { WalletButton } from "./WalletButton";
+import Link from "next/link";
 
 export function Dashboard() {
   const { position, isLoading } = useUserPosition();
@@ -19,15 +20,17 @@ export function Dashboard() {
               Your Portal to Crosschain Liquidity. Lend, borrow, and manage assets anywhere.
             </h1>
             {/* Chainlink SVG Image */}
-            <div className="w-72 h-72 bg-[#0E1F4B] rounded-full flex items-center justify-center p-2">
-              <Image
-                src="/Chainlink.svg"
-                alt="Chainlink Logo"
-                width={280}
-                height={280}
-                className="object-contain"
-              />
-            </div>
+            <a href="https://docs.chain.link/ccip" target="_blank" rel="noopener noreferrer">
+              <div className="w-72 h-72 bg-[#0E1F4B] rounded-full flex items-center justify-center p-2 transition-transform duration-300 ease-in-out hover:scale-105 animate-rainbow-border">
+                <Image
+                  src="/Chainlink.svg"
+                  alt="Chainlink Logo"
+                  width={280}
+                  height={280}
+                  className="object-contain"
+                />
+              </div>
+            </a>
           </div>
 
           {/* Right Side */}
@@ -42,9 +45,11 @@ export function Dashboard() {
                   <h2 className="text-2xl font-bold mb-2">Supply & Earn</h2>
                   <p>Deposit assets on their native chain to start earning competitive interest from cross-chain borrowers.</p>
                 </div>
-                <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
-                  DEPOSIT
-                </button>
+                <Link href="/crosschain">
+                  <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
+                    DEPOSIT
+                  </button>
+                </Link>
               </div>
               {/* Borrow Across Chains */}
               <div className="bg-[#F9DDC7] p-6 rounded-2xl text-[#031138] flex flex-col justify-between">
@@ -52,9 +57,11 @@ export function Dashboard() {
                   <h2 className="text-2xl font-bold mb-2">Borrow Across Chains</h2>
                   <p>Use your collateral on one chain to borrow assets on another, instantly, without bridging.</p>
                 </div>
-                <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
-                  BORROW
-                </button>
+                <Link href="/crosschain">
+                  <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
+                    BORROW
+                  </button>
+                </Link>
               </div>
               {/* Manage Positions */}
               <div className="bg-[#F9DDC7] p-6 rounded-2xl text-[#031138] flex flex-col justify-between">
@@ -62,9 +69,11 @@ export function Dashboard() {
                   <h2 className="text-2xl font-bold mb-2">Manage Positions</h2>
                   <p>Track your supplied assets, outstanding loans, and health factor across all connected chains.</p>
                 </div>
-                <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
-                  VIEW POSITIONS
-                </button>
+                <Link href="/crosschain">
+                  <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
+                    VIEW POSITIONS
+                  </button>
+                </Link>
               </div>
               {/* How It Works */}
               <div className="bg-[#F9DDC7] p-6 rounded-2xl text-[#031138] flex flex-col justify-between">
@@ -72,9 +81,11 @@ export function Dashboard() {
                   <h2 className="text-2xl font-bold mb-2">How It Works</h2>
                   <p>Learn how we connect liquidity across blockchains without direct asset bridging.</p>
                 </div>
-                <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
-                  READ DOCS
-                </button>
+                <Link href="/docs">
+                  <button className="bg-white text-[#031138] font-bold py-2 px-4 rounded-lg self-start mt-4">
+                    READ DOCS
+                  </button>
+                </Link>
               </div>
             </div>
           </div>

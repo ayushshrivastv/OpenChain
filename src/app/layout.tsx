@@ -3,8 +3,8 @@ import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "OnChain - Cross-Chain DeFi Protocol",
-  description: "Cross-Chain Lending and Borrowing Protocol",
+  title: "OpenChain: CrossChain Lending and Borrowing Protocol Powered by Chainlink",
+  description: "A Cross-Chain Lending and Borrowing Protocol powered by Chainlink.",
 };
 
 export default function RootLayout({
