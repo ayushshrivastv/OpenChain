@@ -56,48 +56,84 @@ export function useTransactions() {
     if (!address || !publicClient || !chainId) return;
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       const contractAddress =
         CONTRACT_ADDRESSES[chainId as SupportedChainId]?.lendingPool;
-      if (!contractAddress) return;
+      if (!contractAddress) {
+        console.warn('No lending pool contract address for chain:', chainId);
+        return;
+      }
 
-      // Fetch deposit events
-      const depositLogs = await publicClient.getLogs({
+      // Check if contract is deployed before fetching logs
+      const bytecode = await publicClient.getBytecode({
         address: contractAddress as `0x${string}`,
-        event: {
-          type: "event",
-          name: "Deposit",
-          inputs: [
-            { type: "address", name: "user", indexed: true },
-            { type: "address", name: "asset", indexed: true },
-            { type: "uint256", name: "amount" },
-            { type: "uint64", name: "chainSelector", indexed: true },
-          ],
-        },
-        fromBlock: "earliest",
-        args: {
-          user: address,
-        },
+      });
+      
+      if (!bytecode || bytecode === '0x') {
+        console.warn('LendingPool contract not deployed, skipping transaction fetch');
+        setRecentTransactions([]);
+        return;
+      }
+
+      // Use a more recent block range to avoid timeouts
+      const currentBlock = await publicClient.getBlockNumber();
+      const fromBlock = currentBlock > 1000n ? currentBlock - 1000n : 0n;
+
+      // Fetch deposit events with timeout protection
+      const depositLogs = await Promise.race([
+        publicClient.getLogs({
+          address: contractAddress as `0x${string}`,
+          event: {
+            type: "event",
+            name: "Deposit",
+            inputs: [
+              { type: "address", name: "user", indexed: true },
+              { type: "address", name: "asset", indexed: true },
+              { type: "uint256", name: "amount" },
+              { type: "uint64", name: "chainSelector", indexed: true },
+            ],
+          },
+          fromBlock,
+          args: {
+            user: address,
+          },
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 10000)
+        ),
+      ]).catch((error) => {
+        console.warn('Failed to fetch deposit logs:', error);
+        return [];
       });
 
-      // Fetch borrow events
-      const borrowLogs = await publicClient.getLogs({
-        address: contractAddress as `0x${string}`,
-        event: {
-          type: "event",
-          name: "Borrow",
-          inputs: [
-            { type: "address", name: "user", indexed: true },
-            { type: "address", name: "asset", indexed: true },
-            { type: "uint256", name: "amount" },
-            { type: "uint64", name: "destChain", indexed: true },
-            { type: "bytes32", name: "ccipMessageId" },
-          ],
-        },
-        fromBlock: "earliest",
-        args: {
-          user: address,
-        },
+      // Fetch borrow events with timeout protection
+      const borrowLogs = await Promise.race([
+        publicClient.getLogs({
+          address: contractAddress as `0x${string}`,
+          event: {
+            type: "event",
+            name: "Borrow",
+            inputs: [
+              { type: "address", name: "user", indexed: true },
+              { type: "address", name: "asset", indexed: true },
+              { type: "uint256", name: "amount" },
+              { type: "uint64", name: "destChain", indexed: true },
+              { type: "bytes32", name: "ccipMessageId" },
+            ],
+          },
+          fromBlock,
+          args: {
+            user: address,
+          },
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 10000)
+        ),
+      ]).catch((error) => {
+        console.warn('Failed to fetch borrow logs:', error);
+        return [];
       });
 
       // Convert logs to transactions
@@ -105,35 +141,43 @@ export function useTransactions() {
 
       // Process deposit logs
       for (const log of depositLogs) {
-        const block = await publicClient.getBlock({ blockHash: log.blockHash });
-        transactions.push({
-          id: `deposit-${log.transactionHash}-${log.logIndex}`,
-          hash: log.transactionHash,
-          action: "deposit",
-          asset: "USDC", // TODO: Resolve asset from address
-          amount: log.args.amount as bigint,
-          timestamp: Number(block.timestamp) * 1000,
-          status: "completed",
-          sourceChain: chainId,
-          ccipMessageId: undefined,
-        });
+        try {
+          const block = await publicClient.getBlock({ blockHash: log.blockHash });
+          transactions.push({
+            id: `deposit-${log.transactionHash}-${log.logIndex}`,
+            hash: log.transactionHash,
+            action: "deposit",
+            asset: "USDC", // TODO: Resolve asset from address
+            amount: log.args.amount as bigint,
+            timestamp: Number(block.timestamp) * 1000,
+            status: "completed",
+            sourceChain: chainId,
+            ccipMessageId: undefined,
+          });
+        } catch (error) {
+          console.warn('Failed to process deposit log:', error);
+        }
       }
 
       // Process borrow logs
       for (const log of borrowLogs) {
-        const block = await publicClient.getBlock({ blockHash: log.blockHash });
-        transactions.push({
-          id: `borrow-${log.transactionHash}-${log.logIndex}`,
-          hash: log.transactionHash,
-          action: "borrow",
-          asset: "USDC", // TODO: Resolve asset from address
-          amount: log.args.amount as bigint,
-          timestamp: Number(block.timestamp) * 1000,
-          status: "completed",
-          sourceChain: chainId,
-          destChain: Number(log.args.destChain),
-          ccipMessageId: log.args.ccipMessageId as string,
-        });
+        try {
+          const block = await publicClient.getBlock({ blockHash: log.blockHash });
+          transactions.push({
+            id: `borrow-${log.transactionHash}-${log.logIndex}`,
+            hash: log.transactionHash,
+            action: "borrow",
+            asset: "USDC", // TODO: Resolve asset from address
+            amount: log.args.amount as bigint,
+            timestamp: Number(block.timestamp) * 1000,
+            status: "completed",
+            sourceChain: chainId,
+            destChain: Number(log.args.destChain),
+            ccipMessageId: log.args.ccipMessageId as string,
+          });
+        } catch (error) {
+          console.warn('Failed to process borrow log:', error);
+        }
       }
 
       // Sort by timestamp (newest first)
@@ -142,6 +186,8 @@ export function useTransactions() {
     } catch (err) {
       console.error("Error fetching transactions:", err);
       setError("Failed to fetch transaction history");
+      // Set empty array instead of leaving old data
+      setRecentTransactions([]);
     } finally {
       setIsLoading(false);
     }

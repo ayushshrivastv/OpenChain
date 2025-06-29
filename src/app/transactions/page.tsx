@@ -1,6 +1,6 @@
 "use client";
 
-import { LeftSidebar } from "@/components/LeftSidebar";
+import { AppShell } from "@/components/AppShell";
 import { ClientOnly } from "@/components/ClientOnly";
 import { SolanaWalletProvider } from "@/components/SolanaWalletProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,15 +12,16 @@ export default function TransactionsPage() {
     <ClientOnly fallback={<div className="min-h-screen bg-black"></div>}>
       <ClientBody>
         <SolanaWalletProvider>
-          <LeftSidebar />
-          {/* Floating Wallet Button */}
-          <div className="fixed top-6 right-6 z-50">
-            <WalletButton />
-          </div>
-          <main className="pl-48">
-            <div className="min-h-screen bg-black">
+          <AppShell>
+            {/* Floating Wallet Button */}
+            <div className="fixed top-6 right-6 z-50">
+              <WalletButton />
             </div>
-          </main>
+            <div className="min-h-screen bg-black p-8">
+              <h1 className="text-4xl font-bold text-white mb-8">Transaction History</h1>
+              <p className="text-white/80">Transaction history coming soon...</p>
+            </div>
+          </AppShell>
           <Toaster />
         </SolanaWalletProvider>
       </ClientBody>

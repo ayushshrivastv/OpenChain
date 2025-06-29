@@ -36,8 +36,8 @@ const DocsPage = () => {
               {sections.map(section => (
                 <li key={section.id}>
                   <a href={`#${section.id}`} className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center">
-                    <svg className="w-4 h-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
-                    <span>{section.title}</span>
+                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+                    <span className="text-lg font-semibold">{section.title}</span>
                   </a>
                 </li>
               ))}
@@ -47,7 +47,7 @@ const DocsPage = () => {
 
         {/* Right-side Content */}
         <main className="flex-1">
-          <p className="text-lg lg:text-xl text-white mb-16 max-w-3xl">
+          <p className="text-2xl lg:text-3xl text-white mb-16 max-w-3xl">
             A deep dive into the decentralized technologies from Chainlink that power and secure the OpenChain protocol.
           </p>
 
@@ -56,7 +56,7 @@ const DocsPage = () => {
             <article id="price-feeds" className="scroll-mt-24 bg-[#F9DDC7] text-[#031138] p-8 rounded-2xl shadow-lg transition-shadow hover:shadow-xl">
               <header className="flex items-center mb-6">
                 <TechIcon d={sections[0].icon} />
-                <h2 className="text-3xl font-extrabold">{sections[0].title}</h2>
+                <h2 className="text-4xl font-extrabold">{sections[0].title}</h2>
               </header>
               <div className="space-y-4">
                 <div>
@@ -76,7 +76,7 @@ const DocsPage = () => {
             <article id="ccip" className="scroll-mt-24 bg-[#F9DDC7] text-[#031138] p-8 rounded-2xl shadow-lg transition-shadow hover:shadow-xl">
               <header className="flex items-center mb-6">
                 <TechIcon d={sections[1].icon} />
-                <h2 className="text-3xl font-extrabold">{sections[1].title}</h2>
+                <h2 className="text-4xl font-extrabold">{sections[1].title}</h2>
               </header>
               <div className="space-y-4">
                 <div>
@@ -96,7 +96,7 @@ const DocsPage = () => {
             <article id="automation" className="scroll-mt-24 bg-[#F9DDC7] text-[#031138] p-8 rounded-2xl shadow-lg transition-shadow hover:shadow-xl">
               <header className="flex items-center mb-6">
                 <TechIcon d={sections[2].icon} />
-                <h2 className="text-3xl font-extrabold">{sections[2].title}</h2>
+                <h2 className="text-4xl font-extrabold">{sections[2].title}</h2>
               </header>
               <div className="space-y-4">
                 <div>
@@ -116,7 +116,7 @@ const DocsPage = () => {
             <article id="vrf" className="scroll-mt-24 bg-[#F9DDC7] text-[#031138] p-8 rounded-2xl shadow-lg transition-shadow hover:shadow-xl">
               <header className="flex items-center mb-6">
                 <TechIcon d={sections[3].icon} />
-                <h2 className="text-3xl font-extrabold">{sections[3].title}</h2>
+                <h2 className="text-4xl font-extrabold">{sections[3].title}</h2>
               </header>
               <div className="space-y-4">
                 <div>

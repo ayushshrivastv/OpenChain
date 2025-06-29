@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
-import "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
-import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
+import "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
+import "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";

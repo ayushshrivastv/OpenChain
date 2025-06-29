@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 export function WalletButton() {
   const [mounted, setMounted] = useState(false);
   const [showChainModal, setShowChainModal] = useState(false);
-  const { openChainModal } = useChainModal ? useChainModal() : { openChainModal: undefined };
+  
+  // Always call the hook - it should be available from RainbowKit
+  const { openChainModal } = useChainModal();
 
   useEffect(() => {
     setMounted(true);

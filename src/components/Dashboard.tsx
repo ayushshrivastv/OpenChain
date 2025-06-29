@@ -100,9 +100,11 @@ export function Dashboard() {
         <p className="text-xl text-white/80 mt-4 mb-8 max-w-2xl mx-auto">
           Designed for Chromion: A Chainlink Hackathon powered by Chainlink
         </p>
-        <button className="bg-white text-metamask-blue font-bold py-3 px-8 rounded-full text-lg transition-transform hover:scale-105">
-          EXPLORE THE ECOSYSTEM
-        </button>
+        <Link href="/docs">
+          <button className="bg-white text-metamask-blue font-bold py-3 px-8 rounded-full text-lg transition-transform hover:scale-105">
+            EXPLORE DOCUMENTATION
+          </button>
+        </Link>
       </section>
     </>
   );

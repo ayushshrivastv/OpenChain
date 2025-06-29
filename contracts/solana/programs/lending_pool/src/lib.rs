@@ -5,7 +5,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 // Remove chainlink import until compatible version is available
 // use chainlink_solana as chainlink;
 
-declare_id!("6fTsayR6dMoWFbpQ2HB4xRJPiBTPhNUEWCiDBpz3BRAm");
+declare_id!("ss9Hb9bSa6jW2w3UUNBN2aGviAUVMmnwVZ71HZw6xBL");
 
 // Error codes
 #[error_code]

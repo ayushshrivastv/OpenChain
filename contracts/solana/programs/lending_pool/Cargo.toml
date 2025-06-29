@@ -19,13 +19,14 @@ no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 test-sbf = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 # Core Anchor dependencies - using workspace versions
-anchor-lang = "0.31.1"
-anchor-spl = "0.31.1"
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
 
-# Solana dependencies - using workspace versions
+# Solana program dependency - pinned to specific version
 solana-program = { workspace = true }
 
 # Serialization - using workspace version
@@ -38,7 +39,7 @@ thiserror = { workspace = true }
 # Note: These versions are chosen to avoid the security issues found in audit
 
 [dev-dependencies]
-# Test dependencies
-solana-program-test = "~1.18.0"
-solana-sdk = "~1.18.0"
+# Test dependencies - using older stable versions from late 2023
+solana-program-test = "1.16"
+solana-sdk = "1.16"
 tokio = "1.0"

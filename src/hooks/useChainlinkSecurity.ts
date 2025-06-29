@@ -342,31 +342,63 @@ export function useChainlinkSecurity() {
 
   // Listen for security events
   useEffect(() => {
-    if (!publicClient || !contractAddresses?.chainlinkSecurity) return;
+    if (!publicClient || !contractAddresses?.chainlinkSecurity || !address) return;
 
-    const unwatch = publicClient.watchContractEvent({
-      address: contractAddresses.chainlinkSecurity as `0x${string}`,
-      abi: CHAINLINK_SECURITY_ABI,
-      eventName: "SecurityAlert",
-      onLogs: (logs) => {
-        for (const log of logs) {
-          const alert: SecurityAlertType = {
-            id: log.transactionHash,
-            type: log.args.alertType as string,
-            user: log.args.user as string,
-            severity: Number(log.args.severity),
-            details: log.args.details as string,
-            timestamp: new Date(),
-            resolved: false,
-          };
+    let unwatch: (() => void) | undefined;
 
-          setSecurityAlerts((prev) => [alert, ...prev.slice(0, 49)]); // Keep last 50 alerts
+    const setupEventWatcher = async () => {
+      try {
+        // Check if the contract exists before setting up watcher
+        const bytecode = await publicClient.getBytecode({
+          address: contractAddresses.chainlinkSecurity as `0x${string}`,
+        });
+        
+        if (!bytecode || bytecode === '0x') {
+          console.warn('ChainlinkSecurity contract not deployed, skipping event watcher');
+          return;
         }
-      },
-    });
 
-    return () => unwatch();
-  }, [publicClient, contractAddresses]);
+        unwatch = publicClient.watchContractEvent({
+          address: contractAddresses.chainlinkSecurity as `0x${string}`,
+          abi: CHAINLINK_SECURITY_ABI,
+          eventName: "SecurityAlert",
+          onLogs: (logs) => {
+            for (const log of logs) {
+              const alert: SecurityAlertType = {
+                id: log.transactionHash,
+                type: log.args.alertType as string,
+                user: log.args.user as string,
+                severity: Number(log.args.severity),
+                details: log.args.details as string,
+                timestamp: new Date(),
+                resolved: false,
+              };
+
+              setSecurityAlerts((prev) => [alert, ...prev.slice(0, 49)]); // Keep last 50 alerts
+            }
+          },
+          onError: (error) => {
+            console.warn('Contract event watcher error:', error);
+            // Don't throw, just log the error
+          },
+        });
+      } catch (error) {
+        console.warn('Failed to setup contract event watcher:', error);
+      }
+    };
+
+    setupEventWatcher();
+
+    return () => {
+      if (unwatch) {
+        try {
+          unwatch();
+        } catch (error) {
+          console.warn('Error cleaning up event watcher:', error);
+        }
+      }
+    };
+  }, [publicClient, contractAddresses, address]);
 
   // Periodic data refresh
   useEffect(() => {

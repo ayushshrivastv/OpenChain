@@ -1,44 +1,45 @@
 "use client";
 
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import {
-  ConnectionProvider,
-  WalletProvider,
-} from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-} from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl } from "@solana/web3.js";
-import { type FC, type ReactNode, useMemo } from "react";
-
-// Import default styles that can be overridden by your app
-import "@solana/wallet-adapter-react-ui/styles.css";
+import { type FC, type ReactNode, useEffect, useState } from "react";
+import dynamic from 'next/dynamic';
 
 interface SolanaWalletProviderProps {
   children: ReactNode;
 }
 
+// Properly type the dynamic import component
+interface SolanaWalletProviderInternalProps {
+  children: ReactNode;
+}
+
+// Dynamic import of the actual wallet provider to ensure it's never loaded server-side
+const DynamicSolanaProvider = dynamic(
+  () => import('./SolanaWalletProviderInternal').then(mod => ({ 
+    default: mod.SolanaWalletProviderInternal 
+  })),
+  {
+    ssr: false,
+    loading: () => <div className="opacity-0">Loading Solana wallet...</div>
+  }
+) as FC<SolanaWalletProviderInternalProps>;
+
 export const SolanaWalletProvider: FC<SolanaWalletProviderProps> = ({
   children,
 }) => {
-  // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'
-  const network = WalletAdapterNetwork.Devnet;
+  const [isClient, setIsClient] = useState(false);
 
-  // You can also provide a custom RPC endpoint
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    [],
-  );
+  if (!isClient) {
+    return <>{children}</>;
+  }
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+    <DynamicSolanaProvider>
+      {children}
+    </DynamicSolanaProvider>
   );
 };
+

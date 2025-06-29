@@ -167,15 +167,41 @@ export function useUserPosition() {
 
   // Auto-refresh every 30 seconds for real-time updates
   useEffect(() => {
-    if (address) {
-      fetchUserPosition();
-      const interval = setInterval(fetchUserPosition, 30000);
-      return () => clearInterval(interval);
+    if (!address || !publicClient) {
+      // Clear position when wallet disconnected or client unavailable
+      setPosition(null);
+      setPrices({});
+      return;
     }
-    // Clear position when wallet disconnected
-    setPosition(null);
-    setPrices({});
-  }, [address, fetchUserPosition]);
+
+    let isActive = true;
+
+    const safelyFetchPosition = async () => {
+      if (!isActive) return;
+      
+      try {
+        await fetchUserPosition();
+      } catch (error) {
+        console.warn('Error in position polling:', error);
+        // Continue polling despite errors
+      }
+    };
+
+    // Initial fetch
+    safelyFetchPosition();
+
+    // Set up polling interval with error handling
+    const interval = setInterval(() => {
+      if (isActive && address && publicClient) {
+        safelyFetchPosition();
+      }
+    }, 30000);
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [address, publicClient, chainId, fetchUserPosition]);
 
   // Calculate position health status
   const getHealthStatus = useCallback(() => {

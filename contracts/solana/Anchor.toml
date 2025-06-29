@@ -12,7 +12,7 @@ lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 lending_pool = "46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ"
 
 [programs.testnet]
-lending_pool = "6fTsayR6dMoWFbpQ2HB4xRJPiBTPhNUEWCiDBpz3BRAm"
+lending_pool = "ss9Hb9bSa6jW2w3UUNBN2aGviAUVMmnwVZ71HZw6xBL"
 
 [registry]
 url = "https://api.apr.dev"

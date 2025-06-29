@@ -4,12 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function WalletConnector() {
   const [selectedWallet, setSelectedWallet] = useState<"evm" | "solana" | null>(
     null,
   );
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure component is client-side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Show loading state during SSR
+  if (!isClient) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Connect Your Wallet</h2>
+          <p className="text-muted-foreground">
+            Loading wallet connections...
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="p-6">
+            <CardContent className="space-y-4 p-0">
+              <div className="w-full h-32 bg-gray-800 rounded-lg animate-pulse" />
+            </CardContent>
+          </Card>
+          <Card className="p-6">
+            <CardContent className="space-y-4 p-0">
+              <div className="w-full h-32 bg-gray-800 rounded-lg animate-pulse" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
