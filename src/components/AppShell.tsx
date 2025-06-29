@@ -12,6 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <LeftSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="lg:pl-48 flex flex-col min-h-screen">
         <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
+        
         <main className="flex-1">
           {children}
         </main>

@@ -2,14 +2,10 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { WalletButton } from "@/components/WalletButton";
-import { ClientOnly } from "@/components/ClientOnly";
-import { SolanaWalletProvider } from "@/components/SolanaWalletProvider";
-import { Toaster } from "@/components/ui/sonner";
-import ClientBody from "../ClientBody";
 import { LendingProtocol } from '@/components/crosschain/LendingProtocol';
 import { BorrowingProtocol } from '@/components/crosschain/BorrowingProtocol';
 import { YourAssets } from '@/components/crosschain/YourAssets';
+import { WalletButton } from '@/components/WalletButton';
 
 // SVG Logo Components
 const EthLogo = () => (
@@ -31,61 +27,59 @@ const PolygonLogo = () => (
 
 export default function CrossChainPage() {
   const [activeTab, setActiveTab] = useState("Cross Chain Lending");
-  const [selectedNetwork, setSelectedNetwork] = useState('Sepolia');
-  const networks = ['Sepolia', 'Eth', 'Polygon'];
+  const [selectedNetwork, setSelectedNetwork] = useState('Ethereum');
+  const networks = ['Ethereum', 'Solana'];
   const TABS = ["Cross Chain Lending", "Cross Chain Borrowing", "Your Assets"];
 
   return (
-    <ClientOnly>
-      <ClientBody>
-        <SolanaWalletProvider>
-          <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-            <div className="flex justify-between items-start">
-              <h1 className="text-5xl font-extrabold text-white leading-tight max-w-2xl">
-                Cross Chain: Unlock Liquidity Across All Blockchains
-              </h1>
-              <WalletButton />
-            </div>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+      {/* Header: Title and Wallet on the same line */}
+      <div className="flex items-center justify-between gap-8 mb-12">
+        <h1 className="flex-1 text-4xl lg:text-5xl font-extrabold text-white leading-tight">
+          Cross Chain: Unlock Liquidity<br />
+          Across All Blockchains
+        </h1>
+        <div className="flex-shrink-0">
+          <WalletButton />
+        </div>
+      </div>
 
-            {/* MetaMask-style Tab Navigation */}
-            <div className="border-b border-gray-700 mt-8 flex justify-between items-center">
-              <div className="flex space-x-8">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-4 font-extrabold text-lg transition-colors ${
-                      activeTab === tab
-                        ? 'text-white border-b-2 border-[#7C3AED]'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div>
-                <Image
-                  src="/Chinlink.png"
-                  alt="Powered by Chainlink"
-                  width={120}
-                  height={40}
-                  className="object-contain"
-                />
-              </div>
-            </div>
+      {/* Tab Navigation and Content */}
+      <div className="flex items-end justify-between border-b border-gray-700 mb-8">
+        <div className="flex space-x-8">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-4 font-extrabold text-lg transition-colors relative ${
+                activeTab === tab
+                  ? 'text-white'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              {tab}
+              {activeTab === tab && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7C3AED]"></div>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="pb-4">
+          <Image
+            src="/Chinlink.png"
+            alt="Powered by Chainlink"
+            width={120}
+            height={40}
+            className="object-contain"
+          />
+        </div>
+      </div>
 
-            {/* Main Content: Conditionally render based on active tab */}
-            <div className="flex-grow">
-              {activeTab === 'Cross Chain Lending' && <LendingProtocol networks={networks} selectedNetwork={selectedNetwork} setSelectedNetwork={setSelectedNetwork} />}
-              {activeTab === 'Cross Chain Borrowing' && <BorrowingProtocol networks={networks} selectedNetwork={selectedNetwork} setSelectedNetwork={setSelectedNetwork} />}
-              {activeTab === 'Your Assets' && <YourAssets selectedNetwork={selectedNetwork} />}
-            </div>
-
-          </div>
-          <Toaster />
-        </SolanaWalletProvider>
-      </ClientBody>
-    </ClientOnly>
+      <div>
+        {activeTab === 'Cross Chain Lending' && <LendingProtocol networks={networks} selectedNetwork={selectedNetwork} setSelectedNetwork={setSelectedNetwork} />}
+        {activeTab === 'Cross Chain Borrowing' && <BorrowingProtocol networks={networks} selectedNetwork={selectedNetwork} setSelectedNetwork={setSelectedNetwork} />}
+        {activeTab === 'Your Assets' && <YourAssets selectedNetwork={selectedNetwork} />}
+      </div>
+    </div>
   );
 }

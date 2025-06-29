@@ -223,6 +223,19 @@ export const LENDING_POOL_ABI = [
     outputs: [{ name: "price", type: "uint256" }],
   },
   {
+    name: "getAssetConfiguration",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "asset", type: "address" }],
+    outputs: [
+      { name: "ltv", type: "uint256" },
+      { name: "liquidationThreshold", type: "uint256" },
+      { name: "liquidationBonus", type: "uint256" },
+      { name: "isActive", type: "bool" },
+      { name: "canBeCollateral", type: "bool" },
+    ],
+  },
+  {
     name: "supportedAssets",
     type: "function",
     stateMutability: "view",

@@ -268,9 +268,9 @@ export function useTransactions() {
             abi: LENDING_POOL_ABI,
             functionName: "deposit",
             args: [
-              contractAddresses.syntheticAssets[
-                asset as keyof typeof contractAddresses.syntheticAssets
-              ] as `0x${string}`,
+              asset === 'USDC' && 'synthUSDC' in contractAddresses ? contractAddresses.synthUSDC as `0x${string}` :
+              asset === 'WETH' && 'synthWETH' in contractAddresses ? contractAddresses.synthWETH as `0x${string}` :
+              asset as `0x${string}`,
               amountBigInt,
             ] as const,
             account: address,
@@ -297,7 +297,7 @@ export function useTransactions() {
         }
 
         // Same-chain deposit (only for EVM chains)
-        if (!("syntheticAssets" in contractAddresses)) {
+        if (!('synthUSDC' in contractAddresses) || !('synthWETH' in contractAddresses)) {
           throw new Error(
             "Same-chain deposits not supported for this chain type",
           );
@@ -308,9 +308,9 @@ export function useTransactions() {
           abi: LENDING_POOL_ABI,
           functionName: "deposit",
           args: [
-            contractAddresses.syntheticAssets[
-              asset as keyof typeof contractAddresses.syntheticAssets
-            ] as `0x${string}`,
+            asset === 'USDC' && 'synthUSDC' in contractAddresses ? contractAddresses.synthUSDC as `0x${string}` :
+            asset === 'WETH' && 'synthWETH' in contractAddresses ? contractAddresses.synthWETH as `0x${string}` :
+            asset as `0x${string}`,
             amountBigInt,
           ] as const,
           // value: asset === 'ETH' ? amountBigInt : 0n

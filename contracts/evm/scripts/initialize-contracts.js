@@ -14,16 +14,17 @@ const NETWORK_CONFIG = {
   }
 };
 
-// Live Sepolia contract addresses from deployment
+// Live Sepolia contract addresses from LATEST FIXED deployment
 const DEPLOYED_CONTRACTS = {
-  lendingPool: "0xDD5c505d69703230CFFfA1307753923302CEb586",
-  chainlinkPriceFeed: "0x63efCbA94D2A1A4a9dF59A6e73514E0348ED31ff",
-  permissions: "0xEAF4ECeBeE04f7D10c47ff31d152a82596D90800",
-  rateLimiter: "0xb6CCE115d1535693C8e60F62DB6B11DCC0e93BDf",
-  liquidationManager: "0x3b9340C9cC41Fe6F22eF05B555641DC6D7F70c83",
-  chainlinkSecurity: "0xE5B92e04bfb0eb8A1905231586326760E1e42855",
-  timeLock: "0xA5Fc6F5Dfdc2b16cb5570404069310366f482204",
-  syntheticUSDC: "0x7b0d1FCC2e4839Ae10a7F936bB2FFd411237068e"
+  lendingPool: "0x473AC85625b7f9F18eA21d2250ea19Ded1093a99",
+  chainlinkPriceFeed: "0x2E38242Ff1FDa1783fdA682c24A3f409b5c8163f",
+  permissions: "0xe5D4a658583D66a124Af361070c6135A6ce33F5a",
+  rateLimiter: "0x4FFc21015131556B90A86Ab189D9Cba970683205",
+  liquidationManager: "0x53E0672c2280e621f29dCC47696043d6B436F970",
+  chainlinkSecurity: "0x90d25B11B7C7d4814B6D583DfE26321d08ba66ed",
+  timeLock: "0xE55f1Ecc2144B09AFEB3fAf16F91c007568828C0",
+  syntheticUSDC: "0x77036167D0b74Fb82BA5966a507ACA06C5E16B30",
+  syntheticWETH: "0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44"
 };
 
 async function main() {
@@ -150,17 +151,29 @@ async function main() {
       const addEthPriceFeedTx = await priceFeed.addPriceFeed(
         "0x0000000000000000000000000000000000000000", // ETH address (zero address)
         networkConfig.ethUsdPriceFeed,
-        3600 // 1 hour staleness threshold
+        3600, // 1 hour staleness threshold
+        "ETH/USD Price Feed"
       );
       await addEthPriceFeedTx.wait();
       console.log("✅ Added ETH/USD price feed");
+      
+      // Add WETH/USD price feed (same as ETH)
+      const addWethPriceFeedTx = await priceFeed.addPriceFeed(
+        DEPLOYED_CONTRACTS.syntheticWETH,
+        networkConfig.ethUsdPriceFeed, // Use same feed as ETH
+        3600, // 1 hour staleness threshold
+        "WETH/USD Price Feed"
+      );
+      await addWethPriceFeedTx.wait();
+      console.log("✅ Added WETH/USD price feed");
       
       // Add USDC/USD price feed (if available)
       if (networkConfig.usdcUsdPriceFeed) {
         const addUsdcPriceFeedTx = await priceFeed.addPriceFeed(
           DEPLOYED_CONTRACTS.syntheticUSDC,
           networkConfig.usdcUsdPriceFeed,
-          3600 // 1 hour staleness threshold
+          3600, // 1 hour staleness threshold
+          "USDC/USD Price Feed"
         );
         await addUsdcPriceFeedTx.wait();
         console.log("✅ Added USDC/USD price feed");

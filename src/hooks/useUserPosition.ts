@@ -26,20 +26,24 @@ export function useUserPosition() {
       const assets = ["USDC", "WETH", "SOL"];
       const priceData: Record<string, PriceData> = {};
 
-      // Only fetch prices for EVM chains with syntheticAssets
-      if ("syntheticAssets" in contractAddresses) {
+      // Only fetch prices for EVM chains with priceFeed contract
+      if ("priceFeed" in contractAddresses) {
         for (const asset of assets) {
-          const assetAddress =
-            contractAddresses.syntheticAssets[
-              asset as keyof typeof contractAddresses.syntheticAssets
-            ];
+          let assetAddress: string | undefined;
+          
+          if (asset === "USDC" && "synthUSDC" in contractAddresses) {
+            assetAddress = contractAddresses.synthUSDC;
+          } else if (asset === "WETH" && "synthWETH" in contractAddresses) {
+            assetAddress = contractAddresses.synthWETH;
+          }
+          
           if (assetAddress) {
             try {
               const [price, isStale] = (await publicClient.readContract({
-                address: contractAddresses.chainlinkPriceFeed as `0x${string}`,
+                address: contractAddresses.priceFeed as `0x${string}`,
                 abi: CHAINLINK_PRICE_FEED_ABI,
                 functionName: "getSafePrice",
-                args: [assetAddress],
+                args: [assetAddress as `0x${string}`],
               })) as [bigint, boolean];
 
               priceData[asset] = {
@@ -92,30 +96,36 @@ export function useUserPosition() {
       // For each asset, get detailed asset information and calculate individual balances
       // Since we have totalCollateralValue and totalBorrowValue, we'll distribute them
       // proportionally based on asset prices (this is a simplified approach)
-      if ("syntheticAssets" in contractAddresses) {
-        for (const asset of supportedAssets) {
-          const assetAddress =
-            contractAddresses.syntheticAssets[
-              asset as keyof typeof contractAddresses.syntheticAssets
-            ];
-          if (assetAddress) {
-            try {
-              // Get asset configuration from the lending pool
-              const [collateral, borrowed] = (await publicClient.readContract({
-                address: contractAddresses.lendingPool as `0x${string}`,
-                abi: LENDING_POOL_ABI,
-                functionName: "getUserAssetBalance",
-                args: [address, assetAddress],
-              })) as [bigint, bigint];
+      for (const asset of supportedAssets) {
+        let assetAddress: string | undefined;
+        
+        if (asset === "USDC" && "synthUSDC" in contractAddresses) {
+          assetAddress = contractAddresses.synthUSDC;
+        } else if (asset === "WETH" && "synthWETH" in contractAddresses) {
+          assetAddress = contractAddresses.synthWETH;
+        }
+        
+        if (assetAddress) {
+          try {
+            // Get asset configuration from the lending pool
+            const [collateral, borrowed] = (await publicClient.readContract({
+              address: contractAddresses.lendingPool as `0x${string}`,
+              abi: LENDING_POOL_ABI,
+              functionName: "getUserAssetBalance",
+              args: [address, assetAddress as `0x${string}`],
+            })) as [bigint, bigint];
 
-              collateralBalances[asset] = collateral;
-              borrowBalances[asset] = borrowed;
-            } catch (err) {
-              console.warn(`Failed to fetch ${asset} info:`, err);
-              collateralBalances[asset] = 0n;
-              borrowBalances[asset] = 0n;
-            }
+            collateralBalances[asset] = collateral;
+            borrowBalances[asset] = borrowed;
+          } catch (err) {
+            console.warn(`Failed to fetch ${asset} info:`, err);
+            collateralBalances[asset] = 0n;
+            borrowBalances[asset] = 0n;
           }
+        } else {
+          // Asset not available on this chain
+          collateralBalances[asset] = 0n;
+          borrowBalances[asset] = 0n;
         }
       }
 
