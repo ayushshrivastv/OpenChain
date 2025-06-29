@@ -159,18 +159,14 @@
 .animate-delay-500 { animation-delay: 500ms; }
 
 @keyframes rainbow-border {
-  0% { border-color: #ffadad; }
-  15% { border-color: #ffd6a5; }
-  30% { border-color: #fdffb6; }
-  45% { border-color: #caffbf; }
-  60% { border-color: #9bf6ff; }
-  75% { border-color: #a0c4ff; }
-  90% { border-color: #bdb2ff; }
-  100% { border-color: #ffadad; }
+  0% { border-color: #a0c4ff; }
+  25% { border-color: #bdb2ff; }
+  50% { border-color: #ffadad; }
+  75% { border-color: #ffd6a5; }
+  100% { border-color: #a0c4ff; }
 }
 
 .animate-rainbow-border {
-  animation: rainbow-border 8s linear infinite;
-  border-width: 2px;
-  border-style: solid;
+  border: 2px solid;
+  animation: rainbow-border 4s linear infinite;
 }
