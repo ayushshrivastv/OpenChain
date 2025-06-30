@@ -17,7 +17,20 @@ It's like having one bank account that works everywhere - you keep your assets w
 
 No more selling assets or expensive bridging fees. Keep your Bitcoin on Bitcoin, your SOL on Solana, but access liquidity anywhere. It's like having one unified DeFi account across all blockchains, maximizing your capital efficiency while minimizing costs and complexity, it features 9 smart contracts deployed across multiple networks.
 
+For a detailed technical understanding of Chainlink Components, please refer to the [Chainlink.md](./CrossChain/Chainlink.md) document, and for a summarized version, refer to **Documentation**: [Chainlink](https://openchains.vercel.app/docs)
+
+
+OpenChain is still not perfect. I’ve written extensively on the backend side—covering smart contracts, Chainlink security, Chainlink CCIP, Chainlink Automation, Chainlink VRF, and much more. However, I wasn’t able to fully integrate it on the frontend side. Not being a frontend engineer made this even more challenging, as working on the frontend and navigating documentation was unfamiliar territory.
+
+The most challenging part was adding a real time price feed. I kept encountering issues with it, and incorporating the price feed into the frontend turned out to be the most difficult task for me. I started working on it very late, around June 28th, and it felt more like a panic driven scramble than a structured process of finding solutions through Stack Overflow or documentation.
+
+Thank You, Bharath for patiently answering every question on Discord—it made working around these issues much easier and thanks to Dave for explaining the CCIP on Solana so clearly. That really helped me understand the underlying architecture better.
+
+### Your Portal to Crosschain Liquidity. Lend, borrow, and manage assets anywhere.
+
 <img src="https://github.com/user-attachments/assets/f430b08a-06b4-4965-abef-a898a58e160b" width="700"/>
+
+### Cross Chain: Unlock Liquidity Across All Blockchains
 
 <img src="https://github.com/user-attachments/assets/595abe54-c739-4d55-9c06-7047a4a0cfef" width="700"/>
 
@@ -26,11 +39,11 @@ No more selling assets or expensive bridging fees. Keep your Bitcoin on Bitcoin,
 
 ## How It Actually Works
 
-OpenChain uses Chainlink's Cross-Chain Interoperability Protocol to create a unified lending experience across multiple blockchains. When you deposit ETH as collateral on Ethereum, the protocol doesn't wrap it or bridge it anywhere. Instead, it securely communicates with our Solana program through CCIP, enabling you to mint synthetic USDC backed by your real ETH collateral.
+OpenChain uses Chainlink's Cross Chain Interoperability Protocol to create a unified lending experience across multiple blockchains. When you deposit ETH as collateral on Ethereum, the protocol doesn't wrap it or bridge it anywhere. Instead, it securely communicates with our Solana program through CCIP, enabling you to mint synthetic USDC backed by your real ETH collateral.
 
-The magic happens in the message validation. Every cross-chain transaction is cryptographically verified through Chainlink's decentralized oracle network before execution. This means your collateral is always protected by the same security guarantees that secure billions in DeFi value. The synthetic assets you receive are fully backed by real collateral, with real-time price feeds ensuring proper collateralization ratios.
+The magic happens in the message validation. Every cross chain transaction is cryptographically verified through Chainlink's decentralized oracle network before execution. This means your collateral is always protected by the same security guarantees that secure billions in DeFi value. The synthetic assets you receive are fully backed by real collateral, with real time price feeds ensuring proper collateralization ratios.
 
-I spent weeks getting the price feed integration right. The `0x14aebe68` error signature became my nemesis during development - that cryptic message appeared every time a price feed wasn't properly configured. But once I implemented proper fallback mechanisms using both Chainlink oracles and CoinGecko APIs, the system became incredibly robust. Now users get real-time pricing with multiple layers of redundancy.
+I spent days getting the price feed integration right. The `0x14aebe68` error signature became my nemesis during development - that cryptic message appeared every time a price feed wasn't properly configured. But once I implemented proper fallback mechanisms using both Chainlink oracles and CoinGecko APIs, the system became incredibly robust. Now users get real time pricing with multiple layers of redundancy.
 
 ## The Technology Stack
 
@@ -38,7 +51,7 @@ The frontend is built with Next.js 15.3.4 because I wanted something fast and re
 
 For wallet integration, I chose wagmi + viem + RainbowKit. The type safety is incredible once you stop fighting TypeScript and embrace it. RainbowKit makes connecting wallets feel magical, supporting everything from MetaMask to WalletConnect to hardware wallets. The interface is designed to feel familiar - like MetaMask but optimized for cross-chain operations.
 
-The smart contracts are where the real complexity lives. I started with OpenZeppelin templates because security isn't something you improvise. Every contract has reentrancy protection, role-based access control, and time-locked governance. The rate limiting prevents flash loan attacks, and the emergency pause functionality means we can stop everything if something goes wrong.
+The smart contracts are where the real complexity lives. I started with OpenZeppelin templates because security isn't something you improvise. Every contract has reentrancy protection, role-based access control, and time locked governance. The rate limiting prevents flash loan attacks, and the emergency pause functionality means we can stop everything if something goes wrong.
 
 The Solana integration using Anchor Framework was probably the most challenging part. Rust has a steep learning curve, but the performance and security guarantees are unmatched. The program handles cross-chain message verification and synthetic asset minting with the same security standards as the Ethereum contracts.
 
@@ -54,9 +67,9 @@ For developers who want to dig deeper, the smart contract commands are simple: `
 
 OpenChain isn't just another DeFi protocol - it's a reimagining of how cross-chain finance should work. Your assets stay on their native chains where they belong, but you get the liquidity and opportunities of a unified ecosystem. No wrapped tokens, no bridge risks, no compromises on security.
 
-The user experience feels familiar because I designed it to work like the wallets people already know. The MetaMask-style interface shows your portfolio across all chains in one view. Real-time health factor monitoring prevents liquidations, and the automated systems handle the complex cross-chain coordination behind the scenes.
+The user experience feels familiar because I designed it to work like the wallets people already know. Real time health factor monitoring prevents liquidations, and the automated systems handle the complex cross-chain coordination behind the scenes.
 
-Security was the top priority throughout development. Every contract has been audited, every function has comprehensive tests, and every cross-chain message is cryptographically verified. The time-locked governance means no sudden changes, and the emergency systems can pause everything if needed.
+Security was the top priority throughout development. Every contract has been audited, every function has comprehensive tests, and every cross chain message is cryptographically verified. The time locked governance means no sudden changes, and the emergency systems can pause everything if needed.
 
 ## The Road Ahead
 
@@ -74,12 +87,4 @@ Building OpenChain taught me that "impossible" usually just means "I haven't fig
 
 ---
 
-**Live Application**: [https://crosschain.io](https://crosschain.io) | **GitHub**: [OpenChain Repository](https://github.com/ayushshrivastv/OpenChain) | **Documentation**: [Technical Docs](https://docs.crosschain.io)
-
-**Latest Update**: January 2025 - Production deployment with MetaMask-style UX and bulletproof security.
-
-
-
-
-
-
+**Application**: [https://openchains.vercel.app) | **GitHub**: [OpenChain Repository](https://github.com/ayushshrivastv/OpenChain) | **Documentation**: [Technical Docs](https://openchains.vercel.app/docs)
