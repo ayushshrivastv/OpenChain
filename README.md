@@ -17,12 +17,11 @@ It's like having one bank account that works everywhere - you keep your assets w
 
 No more selling assets or expensive bridging fees. Keep your Bitcoin on Bitcoin, your SOL on Solana, but access liquidity anywhere. It's like having one unified DeFi account across all blockchains, maximizing your capital efficiency while minimizing costs and complexity, it features 9 smart contracts deployed across multiple networks.
 
+<img src="https://github.com/user-attachments/assets/f430b08a-06b4-4965-abef-a898a58e160b" width="700"/>
 
-![Screenshot 2025-06-29 at 12 28 20 PM](https://github.com/user-attachments/assets/f430b08a-06b4-4965-abef-a898a58e160b)
+<img src="https://github.com/user-attachments/assets/595abe54-c739-4d55-9c06-7047a4a0cfef" width="700"/>
 
-![Screenshot 2025-06-29 at 12 30 01 PM](https://github.com/user-attachments/assets/595abe54-c739-4d55-9c06-7047a4a0cfef)
-
-![Screenshot 2025-06-30 at 4 52 44 AM](https://github.com/user-attachments/assets/d516ef04-0c39-4511-af4f-816b04d1b819)
+<img src="https://github.com/user-attachments/assets/d516ef04-0c39-4511-af4f-816b04d1b819" width="700"/>
 
 
 ## How It Actually Works
