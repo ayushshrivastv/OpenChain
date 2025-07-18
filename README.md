@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Anchor](https://img.shields.io/badge/Anchor-0.31.1-purple)](https://www.anchor-lang.com/)
 
-## Cross Chain Lending & Borrowing Protocol, Powered by Chainlink
+## Cross Chain Lending & Borrowing Protocol
 
 Unlock Liquidity Across All Blockchains
 
@@ -19,12 +19,7 @@ No more selling assets or expensive bridging fees. Keep your Bitcoin on Bitcoin,
 
 For a detailed technical understanding of Chainlink Components, please refer to the [Chainlink.md](./CrossChain/Chainlink.md) document, and for a summarized version, refer to **Documentation**: [Chainlink](https://openchains.vercel.app/docs)
 
-
 OpenChain is still not perfect. I’ve written extensively on the backend side—covering smart contracts, Chainlink security, Chainlink CCIP, Chainlink Automation, Chainlink VRF, and much more. However, I wasn’t able to fully integrate it on the frontend side. Not being a frontend engineer made this even more challenging, as working on the frontend and navigating documentation was unfamiliar territory.
-
-The most challenging part was adding a real time price feed. I kept encountering issues with it, and incorporating the price feed into the frontend turned out to be the most difficult task for me. I started working on it very late, around June 28th, and it felt more like a panic driven scramble than a structured process of finding solutions through Stack Overflow or documentation.
-
-Thank You, Bharath for patiently answering every question on Discord—it made working around these issues much easier and thanks to Dave for explaining the CCIP on Solana so clearly. That really helped me understand the underlying architecture better.
 
 ### Your Portal to Crosschain Liquidity. Lend, borrow, and manage assets anywhere.
 
