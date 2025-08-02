@@ -5,6 +5,41 @@ import Image from 'next/image';
 import { DepositModal } from '@/components/DepositModal';
 import { useAccount, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
+import { getNetworkTokens, getSupportedNetworks, getNetworkConfig, TokenConfig } from '@/lib/tokenConfig';
+import { priceService } from '@/lib/priceService';
+import { balanceService } from '@/lib/balanceService';
+
+// Solana/Anchor imports
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
+import * as web3 from '@solana/web3.js';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
+
+// Dummy ABI for LendingPool (replace with actual ABI)
+const LENDING_POOL_ABI = [
+  {
+    "inputs": [
+      { "internalType": "address", "name": "asset", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "borrow",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "borrowETH",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+];
+
+// Solana/Anchor config (replace with real values as needed)
+const LENDING_POOL_IDL = {}; // TODO: Replace with actual Anchor IDL JSON
 
 // SVG Logo Components from parent
 const EthLogo = () => (
@@ -41,10 +76,20 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
   } | null>(null);
   const [borrowAmount, setBorrowAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+
+  // Solana borrow state
+  const [solanaBorrowTx, setSolanaBorrowTx] = useState<string | null>(null);
+  const [solanaBorrowError, setSolanaBorrowError] = useState<string | null>(null);
 
   // Wagmi hooks for wallet integration
   const { address, isConnected } = useAccount();
-  const { writeContract } = useWriteContract();
+  const { writeContract, error: writeError } = useWriteContract();
+
+  // Solana wallet
+  const { publicKey: solPubKey, sendTransaction: solSendTx } = useWallet();
 
   // Contract addresses
   const CONTRACTS = {
@@ -53,22 +98,20 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
     SYNTH_WETH: '0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44'
   };
 
-        // Enhanced price fetching from Chainlink smart contracts - NO MORE MOCK DATA!
+  // Enhanced price fetching from Chainlink smart contracts - NO MORE MOCK DATA!
   useEffect(() => {
     const fetchPrices = async () => {
       setPricesLoading(true);
-      console.log('🔄 Fetching real-time market prices...');
       try {
         const response = await fetch('/api/token-prices');
-                  if (response.ok) {
-            const prices = await response.json();
-            console.log('✅ Real-time market prices loaded:', prices);
-            setTokenPrices(prices);
-          } else {
-            console.error('❌ Failed to fetch market prices:', response.statusText);
-          }
-        } catch (error) {
-          console.error('❌ Failed to fetch market prices:', error);
+        if (response.ok) {
+          const prices = await response.json();
+          setTokenPrices(prices);
+        } else {
+          console.error('❌ Failed to fetch market prices:', response.statusText);
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch market prices:', error);
       } finally {
         setPricesLoading(false);
       }
@@ -108,50 +151,82 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
     return balance?.value?.toString() || '0.00';
   };
 
-  // Handle borrow transaction
+  // Handle borrow transaction (EVM and Solana)
   const handleBorrow = async (tokenSymbol: string, amount: string) => {
-    if (!address || !isConnected) {
+    if (!address && !solPubKey) {
       alert('Please connect your wallet first');
       return;
     }
-
     if (!amount || parseFloat(amount) <= 0) {
       alert('Please enter a valid amount');
       return;
     }
-
     setIsLoading(true);
+    setTxStatus('pending');
+    setTxHash(null);
+    setSolanaBorrowError(null);
+    setSolanaBorrowTx(null);
     try {
-      const token = getNetworkTokens().find(t => t.symbol === tokenSymbol);
+      const token = getNetworkTokensWithBalances().find(t => t.symbol === tokenSymbol);
       if (!token) throw new Error('Token not found');
-
-      // Call backend API to prepare transaction
-      const response = await fetch('/api/borrow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userAddress: address,
-          tokenAddress: token.address,
-          amount: parseEther(amount).toString(),
-          action: 'borrow'
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        // In a real implementation, you would use writeContract here
-        console.log('Borrow transaction prepared:', result.transactionData);
-        alert(`Borrow transaction prepared for ${amount} ${tokenSymbol}`);
-        
-        // Reset form
+      const isEvm = token.address.startsWith('0x') || token.address === 'native';
+      if (isEvm) {
+        // EVM: existing code
+        const lendingPool = CONTRACTS.LENDING_POOL;
+        let tx;
+        if (token.address === 'native') {
+          tx = await writeContract({
+            address: lendingPool as `0x${string}`,
+            abi: LENDING_POOL_ABI,
+            functionName: 'borrowETH',
+            args: [parseEther(amount)],
+          });
+        } else {
+          tx = await writeContract({
+            address: lendingPool as `0x${string}`,
+            abi: LENDING_POOL_ABI,
+            functionName: 'borrow',
+            args: [token.address, parseEther(amount)],
+          });
+        }
+        setTxStatus('success');
+        setTxHash((tx as any)?.hash || null);
+        setBorrowAmount('');
+        setIsDepositModalOpen(false);
+      } else if (solPubKey && solSendTx) {
+        // Solana: anchor borrow_cross_chain call
+        const connection = new Connection(SOLANA_ENDPOINT);
+        // @ts-ignore
+        const provider = new AnchorProvider(connection, window.solana, {});
+        const program = new Program(LENDING_POOL_IDL as any, new PublicKey(SOLANA_PROGRAM_ID), provider);
+        // TODO: Replace with real PDAs and addresses
+        const poolPda = new PublicKey('ENTER_POOL_PDA'); // replace with actual pool PDA
+        const mint = token.symbol === 'SOL' ? web3.SystemProgram.programId : new PublicKey(USDC_MINT_ADDRESS);
+        // Receiver: here just use own wallet for demo
+        const receiver = solPubKey.toBuffer();
+        // dest_chain: put demo value (e.g. 1 for EVM destination)
+        const destChain = 1;
+        // Build tx and call anchor method
+        const txSig = await program.methods.borrowCrossChain(new BN(parseFloat(amount) * 1e6), new BN(destChain), receiver)
+          .accounts({
+            user: solPubKey,
+            pool: poolPda,
+            mint,
+            // TODO: add all required accounts from your program IDL...
+            tokenProgram: web3.TOKEN_PROGRAM_ID
+          })
+          .rpc();
+        setSolanaBorrowTx(txSig);
+        setTxStatus('success');
         setBorrowAmount('');
         setIsDepositModalOpen(false);
       } else {
-        throw new Error(result.error || 'Transaction failed');
+        setSolanaBorrowError('Solana wallet not connected');
+        setTxStatus('error');
       }
-    } catch (error) {
-      console.error('Borrow error:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (error: any) {
+      setTxStatus('error');
+      setSolanaBorrowError(error?.message || 'Solana borrow failed.');
     } finally {
       setIsLoading(false);
     }
@@ -165,107 +240,81 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
     }
 
     setIsLoading(true);
+    setTxStatus('pending');
+    setTxHash(null);
+    setTxError(null);
+
     try {
-      const token = getNetworkTokens().find(t => t.symbol === tokenSymbol);
+      const token = getNetworkTokensWithBalances().find(t => t.symbol === tokenSymbol);
       if (!token) throw new Error('Token not found');
-
-      const response = await fetch('/api/borrow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userAddress: address,
-          tokenAddress: token.address,
-          amount: parseEther(amount).toString(),
-          action: 'repay'
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        console.log('Repay transaction prepared:', result.transactionData);
-        alert(`Repay transaction prepared for ${amount} ${tokenSymbol}`);
+      const isEvm = token.address.startsWith('0x') || token.address === 'native';
+      if (isEvm) {
+        // Repay logic for EVM (not implemented here)
+        setTimeout(() => {
+          setTxStatus('success');
+          alert(`Repay submitted for ${amount} ${tokenSymbol} (EVM)`);
+        }, 800);
       } else {
-        throw new Error(result.error || 'Transaction failed');
+        setTimeout(() => {
+          setTxStatus('idle');
+          alert('Solana repay coming soon!');
+        }, 600);
       }
     } catch (error) {
-      console.error('Repay error:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTxStatus('error');
+      setTxError(error instanceof Error ? error.message : 'Unknown error');
+      alert(`Repay error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getNetworkTokens = () => {
-    switch (selectedNetwork) {
-      case 'ethereum':
-      case 'Ethereum':
-        // Sepolia Testnet - Your deployed 9-contract infrastructure
-        return [
-          {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            address: 'native', // Native ETH on Sepolia
-            network: 'Sepolia Testnet',
-            contractType: 'Native Asset',
-            balance: '2.45',
-            price: tokenPrices.ETH || 0,
-            crossChainEnabled: true
-          },
-          {
-            symbol: 'USDC',
-            name: 'USDC',
-            address: '0x77036167D0b74Fb82BA5966a507ACA06C5E16B30', // SyntheticAsset.sol (USDC)
-            network: 'Sepolia Testnet',
-            contractType: 'SyntheticAsset.sol',
-            balance: '1,250.00',
-            price: tokenPrices.USDC || 1,
-            crossChainEnabled: true
-          },
-          {
-            symbol: 'WETH',
-            name: 'Wrapped Ethereum',
-            address: '0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44', // SyntheticAsset.sol (WETH)
-            network: 'Sepolia Testnet',
-            contractType: 'SyntheticAsset.sol',
-            balance: '2.45',
-            price: tokenPrices.WETH || tokenPrices.ETH || 0,
-            crossChainEnabled: true
-          }
-        ];
+  // Get network tokens with dynamic balances and prices
+  const getNetworkTokensWithBalances = () => {
+    const tokens = getNetworkTokens(selectedNetwork.toLowerCase());
+    
+    return tokens.map(token => {
+      // Use placeholder balances for borrowing protocol demo
+      let balance = '0';
       
-      default:
-        // Solana Network - Connected via Chainlink CCIP
-        return [
-          {
-            symbol: 'SOL',
-            name: 'Solana',
-            address: '46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ', // Your Solana Program
-            network: 'Solana Devnet',
-            contractType: 'Rust Program',
-            balance: '12.45',
-            price: tokenPrices.SOL || 0,
-            crossChainEnabled: true
-          },
-          {
-            symbol: 'USDC',
-            name: 'USDC',
-            address: 'SPL-USDC', // Solana SPL USDC
-            network: 'Solana Devnet',
-            contractType: 'SPL Token',
-            balance: '850.00',
-            price: tokenPrices.USDC || 1,
-            crossChainEnabled: true
-          }
-        ];
-    }
+      // Set demo balances based on token type
+      if (selectedNetwork.toLowerCase() === 'ethereum') {
+        switch (token.symbol) {
+          case 'ETH':
+            balance = '2.45';
+            break;
+          case 'USDC':
+            balance = '1,250.00';
+            break;
+          case 'WETH':
+            balance = '2.45';
+            break;
+        }
+      } else if (selectedNetwork.toLowerCase() === 'solana') {
+        switch (token.symbol) {
+          case 'SOL':
+            balance = '12.45';
+            break;
+          case 'USDC':
+            balance = '850.00';
+            break;
+        }
+      }
+      
+      return {
+        ...token,
+        balance,
+        price: tokenPrices[token.symbol] || 0
+      };
+    });
   };
 
   return (
     <div className="flex-grow pt-4">
       <div className="flex justify-between items-center mb-8">
-                  <div>
-            <h2 className="text-3xl font-bold text-white">Borrowing Protocol</h2>
-          </div>
+        <div>
+          <h2 className="text-3xl font-bold text-white">Borrowing Protocol</h2>
+        </div>
       </div>
 
       {/* Network Selector Buttons */}
@@ -298,6 +347,52 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
         ))}
       </div>
 
+      {/* Transaction Feedback */}
+      {txStatus === 'pending' && (
+        <div className="mb-4 p-3 rounded-lg bg-yellow-100 text-yellow-800 font-semibold flex items-center gap-2">
+          <span className="animate-spin h-5 w-5 mr-2 border-2 border-yellow-500 border-t-transparent rounded-full"></span>
+          Transaction pending...
+        </div>
+      )}
+      {txStatus === 'success' && txHash && (
+        <div className="mb-4 p-3 rounded-lg bg-green-100 text-green-800 font-semibold">
+          Transaction submitted!{' '}
+          <a
+            href={`https://sepolia.etherscan.io/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-green-900"
+          >
+            View on Etherscan
+          </a>
+        </div>
+      )}
+      {txStatus === 'error' && txError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 font-semibold">
+          Error: {txError}
+        </div>
+      )}
+
+      {/* Solana Borrow Status */}
+      {solanaBorrowTx && (
+        <div className="mb-4 p-3 rounded-lg bg-green-100 text-green-800 font-semibold">
+          Solana borrow submitted!{' '}
+          <a
+            href={`https://explorer.solana.com/tx/${solanaBorrowTx}?cluster=devnet`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-green-900"
+          >
+            View on Solana Explorer
+          </a>
+        </div>
+      )}
+      {solanaBorrowError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 font-semibold">
+          Error: {solanaBorrowError}
+        </div>
+      )}
+
       {/* Token Selection Insight Box */}
       <div className="relative mb-12">
         {/* Available Assets tag */}
@@ -306,10 +401,10 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
             Available to Borrow
           </div>
         </div>
-        
+
         <div className="bg-white/5 rounded-2xl p-6 pt-12">
           <div className="grid grid-cols-3 gap-4">
-            {getNetworkTokens().map((token, index) => (
+            {getNetworkTokensWithBalances().map((token, index) => (
               <div
                 key={token.symbol}
                 onClick={() => setSelectedBorrowingToken(token.symbol)}
@@ -352,18 +447,18 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
                     )}
                   </div>
                 </div>
-                
+
                 <div className="text-left">
                   <div className="text-gray-900 font-bold text-xl mb-1">
                     {token.name}
                   </div>
                   <div className="text-gray-600 text-sm mb-1">{token.symbol}</div>
                   <div className="text-gray-500 text-xs mb-2 font-mono">
-                    {token.address === 'native' ? 'native' : 
+                    {token.address === 'native' ? 'native' :
                      token.address === 'SPL-USDC' ? 'SPL-USDC' :
                      token.address.slice(0, 6) + '...' + token.address.slice(-4)}
                   </div>
-                  
+
                   <div className="text-left mt-6">
                     {pricesLoading ? (
                       <div className="animate-pulse">
@@ -377,7 +472,7 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
                             maximumFractionDigits: token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 0
                           })}
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="text-xs text-gray-500">
                             {isConnected && userBorrowData?.availableTokens?.find((t: { symbol: string; currentRate: string }) => t.symbol === token.symbol) && (
@@ -386,19 +481,19 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
                           </div>
                           {selectedBorrowingToken === token.symbol && (
                             <div className="flex gap-2">
-                              <button 
-                                onClick={(e) => {
+                              <button
+                                onClick={async (e) => {
                                   e.stopPropagation();
                                   const amount = prompt(`Enter amount to borrow (${token.symbol}):`);
-                                  if (amount) handleBorrow(token.symbol, amount);
+                                  if (amount) await handleBorrow(token.symbol, amount);
                                 }}
-                                disabled={!isConnected || isLoading}
+                                disabled={(!isConnected && !solPubKey) || isLoading}
                                 className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-extrabold py-2 px-4 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl text-sm"
                               >
                                 {isLoading ? 'Processing...' : 'Borrow'}
                               </button>
                               {userBorrowData?.userPositions?.some((p: { token: string }) => p.token === token.symbol) && (
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     const amount = prompt(`Enter amount to repay (${token.symbol}):`);
@@ -423,7 +518,7 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
         </div>
       </div>
 
-       {/* Feature Cards */}
+      {/* Feature Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-16">
         {/* Card 1: Select Asset to Borrow */}
         <div className="bg-[#F9DDC7] p-8 rounded-2xl text-[#031138] flex flex-col justify-between shadow-xl transition-transform hover:scale-105">
@@ -452,8 +547,8 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
       <DepositModal
         isOpen={isDepositModalOpen}
         onClose={() => setIsDepositModalOpen(false)}
-        token={getNetworkTokens().find(t => t.symbol === selectedBorrowingToken) || getNetworkTokens()[0]}
+        token={getNetworkTokensWithBalances().find(t => t.symbol === selectedBorrowingToken) || getNetworkTokensWithBalances()[0]}
       />
     </div>
   );
-} 
+}

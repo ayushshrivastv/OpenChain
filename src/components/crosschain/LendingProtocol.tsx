@@ -9,6 +9,12 @@ import { CHAINLINK_PRICE_FEED_ABI } from '@/lib/contracts';
 import { DepositModal } from '@/components/DepositModal';
 import { getContractAddresses, DeployedContracts } from '../../lib/contracts';
 
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { getNetworkTokens, getSupportedNetworks, getNetworkConfig, TokenConfig } from '@/lib/tokenConfig';
+import { priceService } from '@/lib/priceService';
+import { balanceService } from '@/lib/balanceService';
+
 // SVG Logo Components
 const EthLogo = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
@@ -27,6 +33,8 @@ const PolygonLogo = () => (
   </svg>
 );
 
+
+
 interface LendingProtocolProps {
   networks: string[];
   selectedNetwork: string;
@@ -40,6 +48,35 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
   const chainId = useChainId();
   const { address } = useAccount();
 
+  // Solana wallet
+  const { publicKey } = useWallet();
+  const [solanaBalances, setSolanaBalances] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function fetchSolanaTokenBalances() {
+      if (!publicKey) {
+        setSolanaBalances({});
+        return;
+      }
+      
+      try {
+        const solanaTokens = getNetworkTokens('solana');
+        const balances = await balanceService.getSolanaBalances(publicKey, solanaTokens);
+        
+        const balanceMap: Record<string, string> = {};
+        balances.forEach(balance => {
+          balanceMap[balance.symbol] = balance.balance;
+        });
+        
+        setSolanaBalances(balanceMap);
+      } catch (error) {
+        console.error('Error fetching Solana balances:', error);
+        setSolanaBalances({});
+      }
+    }
+    fetchSolanaTokenBalances();
+  }, [publicKey]);
+
   // Get ETH balance for native token
   const { data: ethBalance } = useBalance({
     address: address,
@@ -49,12 +86,17 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
     }
   });
 
+  // Get token balances dynamically based on network configuration
+  const networkConfig = getNetworkConfig('ethereum');
+  const usdcToken = networkConfig?.tokens.find(t => t.symbol === 'USDC');
+  const wethToken = networkConfig?.tokens.find(t => t.symbol === 'WETH');
+
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
     address: address,
-    token: '0x77036167D0b74Fb82BA5966a507ACA06C5E16B30' as `0x${string}`,
+    token: usdcToken?.address !== 'native' ? usdcToken?.address as `0x${string}` : undefined,
     query: {
-      enabled: !!address,
+      enabled: !!address && !!usdcToken && usdcToken.address !== 'native',
       refetchInterval: 5000,
     }
   });
@@ -62,15 +104,15 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
   // Get WETH balance
   const { data: wethBalance } = useBalance({
     address: address,
-    token: '0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44' as `0x${string}`,
+    token: wethToken?.address !== 'native' ? wethToken?.address as `0x${string}` : undefined,
     query: {
-      enabled: !!address,
+      enabled: !!address && !!wethToken && wethToken.address !== 'native',
       refetchInterval: 5000,
     }
   });
 
   // Get contract addresses for current chain (only EVM chains have price feeds)
-  const contractAddresses = chainId && chainId !== 31337 && chainId !== 11155111 ? 
+  const contractAddresses = chainId && chainId !== 31337 && chainId !== 11155111 ?
     CONTRACT_ADDRESSES[11155111] : // Default to Sepolia
     CONTRACT_ADDRESSES[chainId as keyof typeof CONTRACT_ADDRESSES] || CONTRACT_ADDRESSES[11155111];
 
@@ -145,48 +187,24 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
         }
       }
 
-      // Fetch prices for non-EVM chains or fallback
+      // Fetch prices using the price service
       try {
-        const coingeckoIds = [];
-        if (selectedNetwork === 'Solana' || !isEvmChain) {
-          coingeckoIds.push('solana');
-        }
-        if (!newPrices.ETH) coingeckoIds.push('ethereum');
-        if (!newPrices.USDC) coingeckoIds.push('usd-coin');
-
-        if (coingeckoIds.length > 0) {
-          const response = await fetch(
-            `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds.join(',')}&vs_currencies=usd`
-          );
-      const data = await response.json();
-
-          if (selectedNetwork === 'Solana' || !isEvmChain) {
-            newPrices.SOL = data.solana?.usd || 180;
-          }
-          if (!newPrices.ETH) {
-            newPrices.ETH = data.ethereum?.usd || 3200;
-            newPrices.WETH = newPrices.ETH; // WETH same as ETH
-          }
-          if (!newPrices.USDC) {
-            newPrices.USDC = data['usd-coin']?.usd || 1.00;
-          }
-        }
+        const currentNetworkTokens = getNetworkTokens(selectedNetwork.toLowerCase());
+        const fetchedPrices = await priceService.getTokenPrices(currentNetworkTokens);
+        
+        // Merge contract prices with fetched prices (contract prices take precedence)
+        Object.assign(fetchedPrices, newPrices);
+        setTokenPrices(prev => ({ ...prev, ...fetchedPrices }));
       } catch (error) {
-        console.error('Fallback price fetch error:', error);
-        // Hard fallback prices
-        if (selectedNetwork === 'Solana' || !isEvmChain) {
-          newPrices.SOL = 180;
-        }
-        if (!newPrices.ETH) {
-          newPrices.ETH = 3200;
-          newPrices.WETH = 3200;
-        }
-        if (!newPrices.USDC) {
-          newPrices.USDC = 1.00;
-        }
+        console.error('Price fetch error:', error);
+        // Use fallback prices if everything fails
+        const currentNetworkTokens = getNetworkTokens(selectedNetwork.toLowerCase());
+        const fallbackPrices: {[key: string]: number} = {};
+        currentNetworkTokens.forEach(token => {
+          fallbackPrices[token.symbol] = newPrices[token.symbol] || 0;
+        });
+        setTokenPrices(prev => ({ ...prev, ...fallbackPrices }));
       }
-
-      setTokenPrices(prev => ({ ...prev, ...newPrices }));
     };
 
     processContractPrices();
@@ -201,70 +219,32 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
     return parseFloat(formatEther(balance.value)).toFixed(4);
   };
 
-  // Get deployed smart contract tokens based on actual OpenChain protocol deployments
-  const getNetworkTokens = () => {
-    switch (selectedNetwork) {
-      case 'ethereum':
-      case 'Ethereum':
-        // Sepolia Testnet - Your deployed 9-contract infrastructure
-        return [
-          {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            address: 'native', // Native ETH on Sepolia
-            network: 'Sepolia Testnet',
-            contractType: 'Native Asset',
-            balance: formatTokenBalance(ethBalance),
-            price: tokenPrices.ETH || 0,
-            crossChainEnabled: true
-          },
-      {
-        symbol: 'USDC',
-            name: 'USDC',
-            address: '0x77036167D0b74Fb82BA5966a507ACA06C5E16B30', // SyntheticAsset.sol (USDC)
-            network: 'Sepolia Testnet',
-            contractType: 'SyntheticAsset.sol',
-            balance: formatTokenBalance(usdcBalance),
-            price: tokenPrices.USDC || 0,
-            crossChainEnabled: true
-      },
-      {
-        symbol: 'WETH',
-            name: 'Wrapped Ethereum',
-            address: '0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44', // SyntheticAsset.sol (WETH)
-            network: 'Sepolia Testnet',
-            contractType: 'SyntheticAsset.sol',
-            balance: formatTokenBalance(wethBalance),
-            price: tokenPrices.WETH || 0,
-            crossChainEnabled: true
-          }
-        ];
+  // Get network tokens with dynamic balances and prices
+  const getNetworkTokensWithBalances = () => {
+    const tokens = getNetworkTokens(selectedNetwork.toLowerCase());
+    
+    return tokens.map(token => {
+      let balance = '0';
       
-      default:
-        // Solana Network - Connected via Chainlink CCIP
-        return [
-          {
-            symbol: 'SOL',
-            name: 'Solana',
-            address: '46PEhxKNPS6TNy6SHuMBF6eAXR54onGecnLXvv52uwWJ', // Your Solana Program
-            network: 'Solana Devnet',
-            contractType: 'Rust Program',
-            balance: '12.45',
-            price: tokenPrices.SOL || 0,
-            crossChainEnabled: true
-          },
-          {
-            symbol: 'USDC',
-            name: 'USDC',
-            address: 'SPL-USDC', // Solana SPL USDC
-            network: 'Solana Devnet',
-            contractType: 'SPL Token',
-            balance: '850.00',
-            price: tokenPrices.USDC || 0,
-            crossChainEnabled: true
-          }
-        ];
-    }
+      // Get balance based on network and token
+      if (selectedNetwork.toLowerCase() === 'ethereum') {
+        if (token.symbol === 'ETH') {
+          balance = formatTokenBalance(ethBalance);
+        } else if (token.symbol === 'USDC') {
+          balance = formatTokenBalance(usdcBalance);
+        } else if (token.symbol === 'WETH') {
+          balance = formatTokenBalance(wethBalance);
+        }
+      } else if (selectedNetwork.toLowerCase() === 'solana') {
+        balance = solanaBalances[token.symbol] || '0';
+      }
+      
+      return {
+        ...token,
+        balance,
+        price: tokenPrices[token.symbol] || 0
+      };
+    });
   };
 
   return (
@@ -308,23 +288,23 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
           <div className="bg-white text-black font-extrabold px-4 py-2 rounded-t-2xl text-sm tracking-wide">
             Available Chains
           </div>
-              </div>
-        
+        </div>
+
         <div className="bg-white/5 rounded-2xl p-6 pt-12">
           <div className="grid grid-cols-3 gap-4">
-            {getNetworkTokens().map((token, index) => (
+            {getNetworkTokensWithBalances().map((token, index) => (
               <div
-                  key={token.symbol}
-                  onClick={() => setSelectedLendingToken(token.symbol)}
+                key={token.symbol}
+                onClick={() => setSelectedLendingToken(token.symbol)}
                 className={`bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg relative cursor-pointer ${
-                    selectedLendingToken === token.symbol
-                    ? 'border-blue-500 shadow-xl ring-2 ring-blue-200'
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
+                  selectedLendingToken === token.symbol
+                  ? 'border-blue-500 shadow-xl ring-2 ring-blue-200'
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                }`}
+              >
                 <div className="flex items-center mb-6">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center mr-4 overflow-hidden">
-                      {token.symbol === 'USDC' ? (
+                    {token.symbol === 'USDC' ? (
                       <Image
                         src="/USDC.png"
                         alt="USDC Logo"
@@ -358,19 +338,21 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
                       </div>
                     )}
                   </div>
-              </div>
-              
+                </div>
+
                 <div className="text-left">
                   <div className="text-gray-900 font-bold text-xl mb-1">
                     {token.name}
                   </div>
                   <div className="text-gray-600 text-sm mb-1">{token.symbol}</div>
                   <div className="text-gray-500 text-xs mb-2 font-mono">
-                    {token.address === 'native' ? 'native' : 
+                    {token.address === 'native' ? 'native' :
                      token.address === 'SPL-USDC' ? 'SPL-USDC' :
                      token.address.slice(0, 6) + '...' + token.address.slice(-4)}
-              </div>
-
+                  </div>
+                  <div className="text-gray-700 text-sm mb-2">
+                    Balance: <span className="font-mono">{token.balance}</span>
+                  </div>
                   <div className="text-left mt-6">
                     {pricesLoading ? (
                       <div className="animate-pulse">
@@ -384,10 +366,10 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
                             maximumFractionDigits: token.symbol === 'USDC' ? 2 : 0
                           })}
                         </div>
-                        
+
                         <div className="flex items-center justify-end">
                           {selectedLendingToken === token.symbol && (
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation(); // Prevent card selection
                                 setIsDepositModalOpen(true);
@@ -397,8 +379,8 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
                               Deposit
                             </button>
                           )}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -437,7 +419,7 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
       <DepositModal
         isOpen={isDepositModalOpen}
         onClose={() => setIsDepositModalOpen(false)}
-        token={getNetworkTokens().find(t => t.symbol === selectedLendingToken) || getNetworkTokens()[0]}
+        token={getNetworkTokensWithBalances().find(t => t.symbol === selectedLendingToken) || getNetworkTokensWithBalances()[0]}
       />
     </div>
   );
