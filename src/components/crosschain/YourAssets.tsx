@@ -230,27 +230,27 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
 
   // Render table for EVM history
   function renderEvmHistory() {
-    if (!evmHistory.length) return <div className="text-gray-400">No EVM transactions found.</div>;
+    if (!evmHistory.length) return <div className="text-gray-600">No EVM transactions found.</div>;
     return (
-      <table className="min-w-full divide-y divide-gray-800">
-        <thead className="bg-[#181c1d]">
+      <table className="min-w-full divide-y divide-gray-300">
+        <thead className="bg-gray-100">
           <tr>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-200">Type</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-200">Asset</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-gray-200">Amount</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-200">Date</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-200">Tx</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Type</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Asset</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">Amount</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Date</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Tx</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-700">
+        <tbody className="divide-y divide-gray-200">
           {evmHistory.map((log: any) => (
-            <tr key={log.txHash + log.logIndex} className="hover:bg-[#181926] transition-colors">
-              <td className="px-3 py-1 font-medium capitalize text-xs">{log.type}</td>
-              <td className="px-3 py-1 font-mono text-xs">{log.asset ?? '-'}</td>
-              <td className="px-3 py-1 text-right text-xs">{log.amount}</td>
-              <td className="px-3 py-1 text-xs">{log.time ? new Date(log.time * 1000).toLocaleString() : '-'}</td>
+            <tr key={log.txHash + log.logIndex} className="hover:bg-gray-50 transition-colors">
+              <td className="px-3 py-1 font-medium capitalize text-xs text-gray-900">{log.type}</td>
+              <td className="px-3 py-1 font-mono text-xs text-gray-900">{log.asset ?? '-'}</td>
+              <td className="px-3 py-1 text-right text-xs text-gray-900">{log.amount}</td>
+              <td className="px-3 py-1 text-xs text-gray-900">{log.time ? new Date(log.time * 1000).toLocaleString() : '-'}</td>
               <td className="px-3 py-1 text-xs">
-                <a href={ETHERSCAN_BASE + log.txHash} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">View</a>
+                <a href={ETHERSCAN_BASE + log.txHash} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">View</a>
               </td>
             </tr>
           ))}
@@ -263,23 +263,23 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
     <div className="flex-grow pt-12">
       <h3 className="text-white text-2xl font-bold mb-6">Your Unified Portfolio</h3>
       <div className="flex flex-wrap gap-8 mb-8">
-        <div className="bg-[#22223b] p-6 rounded-2xl shadow border border-[#373753] min-w-[200px]">
-          <div className="text-gray-400 text-base mb-2">Total Supplied</div>
-          <div className="text-white text-3xl font-bold">${totalSupplied.toLocaleString()}</div>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg min-w-[200px]">
+          <div className="text-gray-600 text-base mb-2">Total Supplied</div>
+          <div className="text-gray-900 text-3xl font-bold">${totalSupplied.toLocaleString()}</div>
         </div>
-        <div className="bg-[#22223b] p-6 rounded-2xl shadow border border-[#373753] min-w-[200px]">
-          <div className="text-gray-400 text-base mb-2">Total Borrowed</div>
-          <div className="text-white text-3xl font-bold">${totalBorrowed.toLocaleString()}</div>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg min-w-[200px]">
+          <div className="text-gray-600 text-base mb-2">Total Borrowed</div>
+          <div className="text-gray-900 text-3xl font-bold">${totalBorrowed.toLocaleString()}</div>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
         <div>
           <h4 className="text-yellow-200 text-lg font-bold mb-4">EVM Assets</h4>
           {evmAssets.map(asset => (
-            <div key={asset.symbol} className="mb-4 bg-[#19192a] border border-[#422241] rounded-xl p-6">
+            <div key={asset.symbol} className="mb-4 bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg">
               <div className="flex items-center mb-2">
-                <span className="text-white font-extrabold text-xl mr-2">{asset.symbol}</span>
-                <span className="text-gray-400 ml-2 text-sm">Price: ${asset.price}</span>
+                <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
+                <span className="text-gray-600 ml-2 text-sm">Price: ${asset.price}</span>
               </div>
               <div className="flex flex-wrap gap-8 mb-1">
                 <div className="text-green-400">Supplied: {asset.supplied}</div>
@@ -294,10 +294,10 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
         <div>
           <h4 className="text-purple-200 text-lg font-bold mb-4">Solana Assets</h4>
           {solAssets.map(asset => (
-            <div key={asset.symbol} className="mb-4 bg-[#181c1d] border border-[#2f3842] rounded-xl p-6">
+            <div key={asset.symbol} className="mb-4 bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg">
               <div className="flex items-center mb-2">
-                <span className="text-white font-extrabold text-xl mr-2">{asset.symbol}</span>
-                <span className="text-gray-400 ml-2 text-sm">Price: ${asset.price}</span>
+                <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
+                <span className="text-gray-600 ml-2 text-sm">Price: ${asset.price}</span>
               </div>
               <div className="flex flex-wrap gap-8 mb-1">
                 <div className="text-green-400">Supplied: {asset.supplied}</div>
@@ -347,11 +347,11 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
       </div>
       <div className="mt-12">
         <h4 className="text-white/80 text-lg font-bold mb-4">Recent Activity</h4>
-        <div className="bg-[#151422] border border-[#282843] rounded-xl p-5 text-white/70 overflow-x-auto">
-          <div className="mb-2 font-semibold text-yellow-200">EVM (Ethereum):</div>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg overflow-x-auto">
+          <div className="mb-2 font-semibold text-gray-800">EVM (Ethereum):</div>
           {renderEvmHistory()}
-          <div className="mb-2 mt-8 font-semibold text-purple-200">Solana:</div>
-          <div className="text-gray-400">Solana event/activity integration coming soon!</div>
+          <div className="mb-2 mt-8 font-semibold text-gray-800">Solana:</div>
+          <div className="text-gray-600">Solana event/activity integration coming soon!</div>
         </div>
       </div>
       <p className="text-gray-400 text-base pt-8">
