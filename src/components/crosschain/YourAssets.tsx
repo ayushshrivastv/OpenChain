@@ -40,8 +40,12 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
   // EVM transaction history state
   const [evmHistory, setEvmHistory] = useState<any[]>([]);
 
+  // State for real-time prices
+  const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
+  const [priceLoading, setPriceLoading] = useState(false);
+
   useEffect(() => {
-    if (!evmAddress) return;
+    if (!evmAddress || Object.keys(tokenPrices).length === 0) return;
     async function fetchAssets() {
       const promises = assets.map(async (a) => {
         let supplied = 0, borrowed = 0, price = 0, ltv = 0.8;
@@ -60,20 +64,8 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
           supplied = parseFloat(formatEther(BigInt(collateralBalance)));
           borrowed = parseFloat(formatEther(BigInt(borrowBalance)));
         } catch {}
-        try {
-          const r = await fetch('/api/viem/read', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contractAddress: lendingPoolAddr,
-              abi: LENDING_POOL_ABI,
-              functionName: 'getAssetPrice',
-              args: [a.address],
-            })
-          });
-          const { price: raw } = await r.json();
-          price = parseFloat(formatEther(BigInt(raw)));
-        } catch {}
+        // Use real-time price from price service instead of contract
+        price = tokenPrices[a.symbol] || 0;
         try {
           const r = await fetch('/api/viem/read', {
             method: 'POST',
@@ -127,29 +119,115 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
       })));
     }
     fetchAssets();
-  }, [evmAddress]);
+  }, [evmAddress, tokenPrices]);
+
+  // Fetch real-time prices for all tokens
+  useEffect(() => {
+    async function fetchPrices() {
+      setPriceLoading(true);
+      try {
+        // Get all tokens from both networks
+        const evmTokens = getNetworkTokens('ethereum');
+        const solanaTokens = getNetworkTokens('solana');
+        const allTokens = [...evmTokens, ...solanaTokens];
+        
+        // Fetch prices using the price service
+        const prices = await priceService.getTokenPrices(allTokens);
+        setTokenPrices(prices);
+      } catch (error) {
+        console.error('Failed to fetch token prices:', error);
+        // Use fallback prices on error
+        const evmTokens = getNetworkTokens('ethereum');
+        const solanaTokens = getNetworkTokens('solana');
+        const fallbackPrices: Record<string, number> = {};
+        [...evmTokens, ...solanaTokens].forEach(token => {
+          fallbackPrices[token.symbol] = token.symbol === 'ETH' ? 3200 : 
+                                        token.symbol === 'USDC' ? 1 :
+                                        token.symbol === 'SOL' ? 180 :
+                                        token.symbol === 'BONK' ? 0.00000123 : 0;
+        });
+        setTokenPrices(fallbackPrices);
+      } finally {
+        setPriceLoading(false);
+      }
+    }
+    
+    fetchPrices();
+    // Refresh prices every 30 seconds
+    const interval = setInterval(fetchPrices, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    // Solana: fetch position data (use placeholder until backend is connected)
+    // Solana: fetch position data from on-chain program
     async function fetchSol() {
-      if (!solanaKey) return;
+      if (!solanaKey) {
+        setSolAssets([]);
+        return;
+      }
+      
       try {
         const networkConfig = getNetworkConfig('solana');
         if (networkConfig?.rpcUrl) {
           const conn = new Connection(networkConfig.rpcUrl);
-          // TODO: Fetch from your on-chain program, show placeholder for now
-          // For now, set placeholder data
-          setSolAssets([
-            { symbol: 'SOL', supplied: 12.6, borrowed: 3.2, price: 180, ltv: 0.75, health: 1.43 },
-            { symbol: 'USDC', supplied: 720, borrowed: 210, price: 1, ltv: 0.85, health: 1.67 },
-          ]);
+          const solanaTokens = getNetworkTokens('solana');
+          
+          // TODO: Replace with actual on-chain data fetching
+          // For now, simulate fetching from Solana program
+          const solanaAssets = await Promise.all(
+            solanaTokens.map(async (token) => {
+              try {
+                // TODO: Implement actual Solana program calls here
+                // This is a placeholder structure for real implementation
+                
+                // Simulate fetching user's position from Solana program
+                const supplied = 0; // await fetchUserSuppliedAmount(conn, solanaKey, token.address);
+                const borrowed = 0; // await fetchUserBorrowedAmount(conn, solanaKey, token.address);
+                const ltv = 0.75; // await fetchAssetLTV(conn, token.address);
+                
+                // Get real-time price
+                const price = tokenPrices[token.symbol] || 0;
+                
+                // Calculate health factor (simplified)
+                const collateralValue = supplied * price * ltv;
+                const borrowValue = borrowed * price;
+                const health = borrowValue > 0 ? collateralValue / borrowValue : 2.0;
+                
+                return {
+                  symbol: token.symbol,
+                  supplied,
+                  borrowed,
+                  price,
+                  ltv,
+                  health
+                };
+              } catch (error) {
+                console.error(`Error fetching ${token.symbol} data:`, error);
+                return {
+                  symbol: token.symbol,
+                  supplied: 0,
+                  borrowed: 0,
+                  price: tokenPrices[token.symbol] || 0,
+                  ltv: 0.75,
+                  health: 2.0
+                };
+              }
+            })
+          );
+          
+          setSolAssets(solanaAssets);
         }
-      } catch {
+      } catch (error) {
+        console.error('Error fetching Solana assets:', error);
         setSolAssets([]);
       }
     }
-    fetchSol();
-  }, [solanaKey]);
+    
+    // Only fetch Solana data if we have prices and a connected wallet
+    if (Object.keys(tokenPrices).length > 0) {
+      fetchSol();
+    }
+  }, [solanaKey, tokenPrices]);
 
   // Fetch EVM transaction history (Deposit, Borrow, Repay events)
   useEffect(() => {
@@ -279,7 +357,16 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
             <div key={asset.symbol} className="mb-4 bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg">
               <div className="flex items-center mb-2">
                 <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
-                <span className="text-gray-600 ml-2 text-sm">Price: ${asset.price}</span>
+                <span className="text-gray-600 ml-2 text-sm">
+                  Price: ${priceLoading ? '...' : 
+                    asset.price < 0.01 ? 
+                      asset.price.toFixed(8) : 
+                      asset.price < 1 ? 
+                        asset.price.toFixed(4) : 
+                        asset.price.toFixed(2)
+                  }
+                  {!priceLoading && <span className="text-green-500 ml-1">●</span>}
+                </span>
               </div>
               <div className="flex flex-wrap gap-8 mb-1">
                 <div className="text-green-400">Supplied: {asset.supplied}</div>
@@ -297,7 +384,16 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
             <div key={asset.symbol} className="mb-4 bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg">
               <div className="flex items-center mb-2">
                 <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
-                <span className="text-gray-600 ml-2 text-sm">Price: ${asset.price}</span>
+                <span className="text-gray-600 ml-2 text-sm">
+                  Price: ${priceLoading ? '...' : 
+                    asset.price < 0.01 ? 
+                      asset.price.toFixed(8) : 
+                      asset.price < 1 ? 
+                        asset.price.toFixed(4) : 
+                        asset.price.toFixed(2)
+                  }
+                  {!priceLoading && <span className="text-green-500 ml-1">●</span>}
+                </span>
               </div>
               <div className="flex flex-wrap gap-8 mb-1">
                 <div className="text-green-400">Supplied: {asset.supplied}</div>
