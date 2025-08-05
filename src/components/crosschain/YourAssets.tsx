@@ -263,7 +263,12 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
   const totalBorrowed = evmBorrowed + solBorrowed;
 
   // Helper for price formatting
-  function formatPrice(price: number): string {
+  function formatPrice(price: number, symbol?: string): string {
+    // Special handling for USDC - always show as $1
+    if (symbol === 'USDC') {
+      return '1';
+    }
+    
     if (price < 0.01) {
       return price.toFixed(8);
     } else if (price < 1) {
@@ -369,7 +374,7 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
               <div className="flex items-center mb-2">
                 <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
                 <span className="text-gray-600 ml-2 text-sm">
-                  Price: ${priceLoading ? '...' : formatPrice(asset.price)}
+                  Price: ${priceLoading ? '...' : formatPrice(asset.price, asset.symbol)}
                   {!priceLoading && <span className="text-green-500 ml-1">●</span>}
                 </span>
               </div>
@@ -390,7 +395,7 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
               <div className="flex items-center mb-2">
                 <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
                 <span className="text-gray-600 ml-2 text-sm">
-                  Price: ${priceLoading ? '...' : formatPrice(asset.price)}
+                  Price: ${priceLoading ? '...' : formatPrice(asset.price, asset.symbol)}
                   {!priceLoading && <span className="text-green-500 ml-1">●</span>}
                 </span>
               </div>

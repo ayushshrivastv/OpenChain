@@ -71,7 +71,12 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
   const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
 
   // Helper for price formatting
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number, symbol?: string): string => {
+    // Special handling for USDC - always show as $1
+    if (symbol === 'USDC') {
+      return '1';
+    }
+    
     if (price < 0.01) {
       return price.toFixed(8);
     } else if (price < 1) {
@@ -482,7 +487,7 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
                     ) : (
                       <div>
                         <div className="text-4xl font-bold text-gray-900 mb-3">
-                          ${formatPrice(token.price || 0)}
+                          ${formatPrice(token.price || 0, token.symbol)}
                         </div>
 
                         <div className="flex items-center justify-between">
