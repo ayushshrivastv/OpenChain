@@ -262,6 +262,17 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
   const totalSupplied = evmSupplied + solSupplied;
   const totalBorrowed = evmBorrowed + solBorrowed;
 
+  // Helper for price formatting
+  function formatPrice(price: number): string {
+    if (price < 0.01) {
+      return price.toFixed(8);
+    } else if (price < 1) {
+      return price.toFixed(4);
+    } else {
+      return price.toFixed(2);
+    }
+  }
+
   // Helper for health color
   function healthColor(health: number) {
     if (health > 2) return 'text-green-500'; // Healthy
@@ -343,11 +354,11 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
       <div className="flex flex-wrap gap-8 mb-8">
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg min-w-[200px]">
           <div className="text-gray-600 text-base mb-2">Total Supplied</div>
-          <div className="text-gray-900 text-3xl font-bold">${totalSupplied.toLocaleString()}</div>
+          <div className="text-gray-900 text-3xl font-bold">${formatPrice(totalSupplied)}</div>
         </div>
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 rounded-2xl p-6 shadow-lg min-w-[200px]">
           <div className="text-gray-600 text-base mb-2">Total Borrowed</div>
-          <div className="text-gray-900 text-3xl font-bold">${totalBorrowed.toLocaleString()}</div>
+          <div className="text-gray-900 text-3xl font-bold">${formatPrice(totalBorrowed)}</div>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
@@ -358,13 +369,7 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
               <div className="flex items-center mb-2">
                 <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
                 <span className="text-gray-600 ml-2 text-sm">
-                  Price: ${priceLoading ? '...' : 
-                    asset.price < 0.01 ? 
-                      asset.price.toFixed(8) : 
-                      asset.price < 1 ? 
-                        asset.price.toFixed(4) : 
-                        asset.price.toFixed(2)
-                  }
+                  Price: ${priceLoading ? '...' : formatPrice(asset.price)}
                   {!priceLoading && <span className="text-green-500 ml-1">●</span>}
                 </span>
               </div>
@@ -385,13 +390,7 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
               <div className="flex items-center mb-2">
                 <span className="text-gray-900 font-extrabold text-xl mr-2">{asset.symbol}</span>
                 <span className="text-gray-600 ml-2 text-sm">
-                  Price: ${priceLoading ? '...' : 
-                    asset.price < 0.01 ? 
-                      asset.price.toFixed(8) : 
-                      asset.price < 1 ? 
-                        asset.price.toFixed(4) : 
-                        asset.price.toFixed(2)
-                  }
+                  Price: ${priceLoading ? '...' : formatPrice(asset.price)}
                   {!priceLoading && <span className="text-green-500 ml-1">●</span>}
                 </span>
               </div>
