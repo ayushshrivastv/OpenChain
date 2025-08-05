@@ -55,7 +55,7 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
     } else if (price < 1) {
       return price.toFixed(4);
     } else {
-      return price.toFixed(2);
+      return Math.round(price).toString();
     }
   };
 
