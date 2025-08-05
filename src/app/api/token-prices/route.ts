@@ -11,6 +11,7 @@ const TOKEN_ADDRESSES = {
   USDC: '0x77036167D0b74Fb82BA5966a507ACA06C5E16B30', // Your synthetic USDC
   WETH: '0x39CdAe9f7Cb7e06A165f8B4C6864850cCef5CC44', // Your synthetic WETH
   SOL: '0x0000000000000000000000000000000000000001', // Placeholder for SOL
+  BONK: '0x0000000000000000000000000000000000000002', // Placeholder for BONK
 };
 
 // ABI for your ChainlinkPriceFeed contract - using getSafePrice like lending protocol
@@ -69,7 +70,8 @@ async function fetchChainlinkPrice(tokenSymbol: string): Promise<number> {
           ETH: 'ethereum',
           WETH: 'ethereum', // WETH tracks ETH price
           USDC: 'usd-coin',
-          SOL: 'solana'
+          SOL: 'solana',
+          BONK: 'bonk'
         };
         
         const coinId = coinGeckoIds[tokenSymbol];
@@ -94,7 +96,7 @@ async function fetchChainlinkPrice(tokenSymbol: string): Promise<number> {
       
       // Final fallback to reasonable prices
       const fallbackPrices: Record<string, number> = {
-        ETH: 3400, WETH: 3400, USDC: 1.00, SOL: 180
+        ETH: 3400, WETH: 3400, USDC: 1.00, SOL: 180, BONK: 0.00000123
       };
       return fallbackPrices[tokenSymbol] || 0;
     }
@@ -113,7 +115,8 @@ async function fetchChainlinkPrice(tokenSymbol: string): Promise<number> {
       ETH: 3400,
       WETH: 3400,
       USDC: 1.00,
-      SOL: 180
+      SOL: 180,
+      BONK: 0.00000123
     };
     
     console.warn(`Using fallback price for ${tokenSymbol}: $${fallbackPrices[tokenSymbol] || 0}`);

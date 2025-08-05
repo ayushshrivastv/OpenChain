@@ -41,6 +41,12 @@ pub const LIQUIDATION_THRESHOLD: u64 = 950_000_000_000_000_000; // 0.95
 pub const LIQUIDATION_BONUS: u64 = 50_000_000_000_000_000; // 0.05 (5%)
 pub const MAX_LTV: u64 = 750_000_000_000_000_000; // 0.75 (75%)
 
+// Bonk-specific constants
+pub const BONK_MINT: &str = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+pub const BONK_DECIMALS: u8 = 5;
+pub const BONK_LTV: u64 = 600_000_000_000_000_000; // 0.60 (60%) - Lower LTV for meme tokens
+pub const BONK_LIQUIDATION_THRESHOLD: u64 = 800_000_000_000_000_000; // 0.80 (80%)
+
 #[program]
 pub mod lending_pool {
     use super::*;
@@ -99,6 +105,12 @@ pub mod lending_pool {
         require!(!ctx.accounts.pool.is_paused, ErrorCode::NotAuthorized);
         require!(ctx.accounts.asset_info.is_active, ErrorCode::AssetNotSupported);
         require!(ctx.accounts.asset_info.can_be_collateral, ErrorCode::AssetNotSupported);
+
+        // Special handling for Bonk token
+        if is_bonk_token(&ctx.accounts.mint.key()) {
+            // Additional validation for Bonk deposits
+            require!(amount >= 1000, ErrorCode::InvalidAmount); // Minimum deposit amount for Bonk
+        }
 
         // Rate limiting check
         let user_position = &mut ctx.accounts.user_position;
@@ -177,9 +189,15 @@ pub mod lending_pool {
             .checked_add(borrow_value_usd)
             .unwrap();
 
-        // Check LTV ratio
+        // Check LTV ratio - use Bonk-specific LTV if applicable
+        let effective_ltv = if is_bonk_token(&ctx.accounts.mint.key()) {
+            get_bonk_config().0
+        } else {
+            ctx.accounts.asset_info.ltv
+        };
+
         let max_borrow_value = user_position.total_collateral_value_usd
-            .checked_mul(ctx.accounts.asset_info.ltv)
+            .checked_mul(effective_ltv)
             .unwrap()
             .checked_div(PRECISION)
             .unwrap();
@@ -193,11 +211,17 @@ pub mod lending_pool {
         user_position.total_borrow_value_usd = new_total_borrow_value;
         user_position.last_action_timestamp = current_time;
 
-        // Calculate new health factor
+        // Calculate new health factor - use Bonk-specific liquidation threshold if applicable
+        let effective_liquidation_threshold = if is_bonk_token(&ctx.accounts.mint.key()) {
+            get_bonk_config().1
+        } else {
+            ctx.accounts.asset_info.liquidation_threshold
+        };
+
         let new_health_factor = calculate_health_factor(
             user_position.total_collateral_value_usd,
             user_position.total_borrow_value_usd,
-            ctx.accounts.asset_info.liquidation_threshold,
+            effective_liquidation_threshold,
         )?;
 
         require!(new_health_factor >= MIN_HEALTH_FACTOR, ErrorCode::HealthFactorTooLow);
@@ -780,11 +804,19 @@ fn get_asset_price(_price_feed: &AccountInfo) -> Result<u64> {
     Ok(100_000_000_000) // $1000 with 8 decimal places
 }
 
+fn get_bonk_config() -> (u64, u64) {
+    (BONK_LTV, BONK_LIQUIDATION_THRESHOLD)
+}
+
+fn is_bonk_token(mint: &Pubkey) -> bool {
+    mint.to_string() == BONK_MINT
+}
+
 fn calculate_usd_value(amount: u64, price: u64, decimals: u8) -> Result<u64> {
     let amount_normalized = amount
         .checked_mul(10_u64.pow(18_u32.saturating_sub(decimals as u32)))
         .ok_or(ErrorCode::InvalidAmount)?;
-    
+
     amount_normalized
         .checked_mul(price)
         .and_then(|x| x.checked_div(10_u64.pow(8))) // Price has 8 decimals

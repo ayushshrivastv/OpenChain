@@ -193,33 +193,11 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
         setTxHash((tx as any)?.hash || null);
         setBorrowAmount('');
         setIsDepositModalOpen(false);
-      } else if (solPubKey && solSendTx) {
-        // Solana: anchor borrow_cross_chain call
-        const connection = new Connection(SOLANA_ENDPOINT);
-        // @ts-ignore
-        const provider = new AnchorProvider(connection, window.solana, {});
-        const program = new Program(LENDING_POOL_IDL as any, new PublicKey(SOLANA_PROGRAM_ID), provider);
-        // TODO: Replace with real PDAs and addresses
-        const poolPda = new PublicKey('ENTER_POOL_PDA'); // replace with actual pool PDA
-        const mint = token.symbol === 'SOL' ? web3.SystemProgram.programId : new PublicKey(USDC_MINT_ADDRESS);
-        // Receiver: here just use own wallet for demo
-        const receiver = solPubKey.toBuffer();
-        // dest_chain: put demo value (e.g. 1 for EVM destination)
-        const destChain = 1;
-        // Build tx and call anchor method
-        const txSig = await program.methods.borrowCrossChain(new BN(parseFloat(amount) * 1e6), new BN(destChain), receiver)
-          .accounts({
-            user: solPubKey,
-            pool: poolPda,
-            mint,
-            // TODO: add all required accounts from your program IDL...
-            tokenProgram: web3.TOKEN_PROGRAM_ID
-          })
-          .rpc();
-        setSolanaBorrowTx(txSig);
-        setTxStatus('success');
-        setBorrowAmount('');
-        setIsDepositModalOpen(false);
+      } else if (solPubKey) {
+        // Solana: placeholder for future implementation
+        console.log('Solana borrow functionality coming soon!');
+        setSolanaBorrowError('Solana borrow functionality not yet implemented');
+        setTxStatus('error');
       } else {
         setSolanaBorrowError('Solana wallet not connected');
         setTxStatus('error');
@@ -273,6 +251,11 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
   const getNetworkTokensWithBalances = () => {
     const tokens = getNetworkTokens(selectedNetwork.toLowerCase());
     
+    // Debug: Log tokens and prices
+    console.log('🔍 Debug - Selected Network:', selectedNetwork);
+    console.log('🔍 Debug - Available Tokens:', tokens.map(t => t.symbol));
+    console.log('🔍 Debug - Token Prices:', tokenPrices);
+    
     return tokens.map(token => {
       // Use placeholder balances for borrowing protocol demo
       let balance = '0';
@@ -298,13 +281,26 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
           case 'USDC':
             balance = '850.00';
             break;
+          case 'BONK':
+            balance = '1,250,000.00';
+            break;
         }
       }
+      
+      // Use hardcoded price for BONK (always override API)
+      let price = tokenPrices[token.symbol] || 0;
+      if (token.symbol === 'BONK') {
+        price = 0.00002621; // Hardcoded price for BONK - ALWAYS USE THIS
+        console.log('🔍 Debug - FORCING hardcoded BONK price:', price);
+        console.log('🔍 Debug - API returned BONK price:', tokenPrices[token.symbol]);
+      }
+      
+      console.log(`🔍 Debug - Token ${token.symbol}: Price = ${price}, Balance = ${balance}`);
       
       return {
         ...token,
         balance,
-        price: tokenPrices[token.symbol] || 0
+        price: price
       };
     });
   };
@@ -440,6 +436,14 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
                         height={40}
                         className="rounded-full"
                       />
+                    ) : token.symbol === 'BONK' ? (
+                      <Image
+                        src="/bonk-logo.svg"
+                        alt="Bonk Logo"
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                      />
                     ) : (
                       <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-bold text-xs">{token.symbol}</span>
@@ -467,9 +471,9 @@ export function BorrowingProtocol({ networks, selectedNetwork, setSelectedNetwor
                     ) : (
                       <div>
                         <div className="text-4xl font-bold text-gray-900 mb-3">
-                          ${token.price.toLocaleString('en-US', {
-                            minimumFractionDigits: token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 0,
-                            maximumFractionDigits: token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 0
+                          ${(token.price || 0).toLocaleString('en-US', {
+                            minimumFractionDigits: token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 6,
+                            maximumFractionDigits: token.symbol === 'BONK' ? 8 : (token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 6)
                           })}
                         </div>
 

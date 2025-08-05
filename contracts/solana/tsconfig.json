@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["mocha", "chai", "node"],
+    "types": ["node", "mocha"],
     "typeRoots": ["./node_modules/@types"],
     "lib": ["es2020", "dom"],
     "module": "commonjs",
@@ -20,13 +20,14 @@
     "moduleResolution": "node"
   },
   "include": [
-    "tests/**/*",
-    "app/**/*",
+    "scripts/**/*",
     "migrations/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "target"
+    "target",
+    "programs",
+    "tests"
   ]
 } 

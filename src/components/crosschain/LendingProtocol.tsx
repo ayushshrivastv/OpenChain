@@ -223,6 +223,11 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
   const getNetworkTokensWithBalances = () => {
     const tokens = getNetworkTokens(selectedNetwork.toLowerCase());
     
+    // Debug: Log tokens and prices
+    console.log('🔍 Debug - Selected Network:', selectedNetwork);
+    console.log('🔍 Debug - Available Tokens:', tokens.map(t => t.symbol));
+    console.log('🔍 Debug - Token Prices:', tokenPrices);
+    
     return tokens.map(token => {
       let balance = '0';
       
@@ -239,10 +244,20 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
         balance = solanaBalances[token.symbol] || '0';
       }
       
+      // Use hardcoded price for BONK (always override API)
+      let price = tokenPrices[token.symbol] || 0;
+      if (token.symbol === 'BONK') {
+        price = 0.00002621; // Hardcoded price for BONK - ALWAYS USE THIS
+        console.log('🔍 Debug - FORCING hardcoded BONK price:', price);
+        console.log('🔍 Debug - API returned BONK price:', tokenPrices[token.symbol]);
+      }
+      
+      console.log(`🔍 Debug - Token ${token.symbol}: Price = ${price}, Balance = ${balance}`);
+      
       return {
         ...token,
         balance,
-        price: tokenPrices[token.symbol] || 0
+        price: price
       };
     });
   };
@@ -328,6 +343,14 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
                         height={40}
                         className="rounded-full"
                       />
+                    ) : token.symbol === 'BONK' ? (
+                      <Image
+                        src="/bonk-logo.svg"
+                        alt="Bonk Logo"
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                      />
                     ) : token.symbol === 'MATIC' ? (
                       <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-bold text-xs">MATIC</span>
@@ -361,9 +384,9 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
                     ) : (
                       <div>
                         <div className="text-4xl font-bold text-gray-900 mb-3">
-                          ${token.price.toLocaleString('en-US', {
-                            minimumFractionDigits: token.symbol === 'USDC' ? 2 : 0,
-                            maximumFractionDigits: token.symbol === 'USDC' ? 2 : 0
+                          ${(token.price || 0).toLocaleString('en-US', {
+                            minimumFractionDigits: token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 6,
+                            maximumFractionDigits: token.symbol === 'BONK' ? 8 : (token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 6)
                           })}
                         </div>
 

@@ -78,6 +78,16 @@ export const NETWORK_CONFIGS: Record<string, NetworkConfig> = {
         crossChainEnabled: true,
         decimals: 6,
         coingeckoId: 'usd-coin'
+      },
+      {
+        symbol: 'BONK',
+        name: 'Bonk',
+        address: process.env.NEXT_PUBLIC_SOLANA_BONK_MINT || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+        network: 'Solana Devnet',
+        contractType: 'SPL Token',
+        crossChainEnabled: true,
+        decimals: 5,
+        coingeckoId: 'bonk'
       }
     ]
   }
@@ -88,7 +98,8 @@ export const FALLBACK_PRICES: Record<string, number> = {
   ETH: 3200,
   WETH: 3200,
   USDC: 1.00,
-  SOL: 180
+  SOL: 180,
+  BONK: 0.00000123
 };
 
 // API endpoints

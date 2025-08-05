@@ -10,7 +10,7 @@ import { LENDING_POOL_ABI } from '@/lib/contracts';
 
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { Program, AnchorProvider, web3, BN } from '@coral-xyz/anchor';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
 
 const SOLANA_PROGRAM_ID = 'ss9Hb9bSa6jW2w3UUNBN2aGviAUVMmnwVZ71HZw6xBL';
 const SOLANA_ENDPOINT = 'https://api.devnet.solana.com';
@@ -98,8 +98,8 @@ export function DepositModal({ isOpen, onClose, token }: DepositModalProps) {
           tx = await writeContract({
             address: lendingPool as `0x${string}`,
             abi: LENDING_POOL_ABI,
-            functionName: 'depositETH',
-            args: [],
+            functionName: 'deposit',
+            args: [parseEther(depositAmount)],
             value: parseEther(depositAmount),
           });
         } else {
@@ -137,7 +137,7 @@ export function DepositModal({ isOpen, onClose, token }: DepositModalProps) {
             mint,
             userTokenAccount: userToken,
             // ...rest per your program IDL
-            tokenProgram: web3.TOKEN_PROGRAM_ID
+            tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
           })
           .rpc();
         setTransactionHash(txSig);
