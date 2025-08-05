@@ -48,6 +48,17 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
   const chainId = useChainId();
   const { address } = useAccount();
 
+  // Helper for price formatting
+  const formatPrice = (price: number): string => {
+    if (price < 0.01) {
+      return price.toFixed(8);
+    } else if (price < 1) {
+      return price.toFixed(4);
+    } else {
+      return price.toFixed(2);
+    }
+  };
+
   // Solana wallet
   const { publicKey } = useWallet();
   const [solanaBalances, setSolanaBalances] = useState<Record<string, string>>({});
@@ -384,10 +395,7 @@ export function LendingProtocol({ networks, selectedNetwork, setSelectedNetwork 
                     ) : (
                       <div>
                         <div className="text-4xl font-bold text-gray-900 mb-3">
-                          ${(token.price || 0).toLocaleString('en-US', {
-                            minimumFractionDigits: token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 6,
-                            maximumFractionDigits: token.symbol === 'BONK' ? 8 : (token.symbol === 'USDC' || token.symbol === 'DAI' ? 2 : 6)
-                          })}
+                          ${formatPrice(token.price || 0)}
                         </div>
 
                         <div className="flex items-center justify-end">
