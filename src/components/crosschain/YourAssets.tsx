@@ -351,7 +351,7 @@ export function YourAssets({ selectedNetwork }: YourAssetsProps) {
           <div className="mb-2 font-semibold text-gray-800">EVM (Ethereum):</div>
           {renderEvmHistory()}
           <div className="mb-2 mt-8 font-semibold text-gray-800">Solana:</div>
-          <div className="text-gray-600">Solana event/activity integration coming soon!</div>
+          <div className="text-gray-600">Solana transaction history will be displayed here once available.</div>
         </div>
       </div>
       <p className="text-gray-400 text-base pt-8">
