@@ -1,137 +1,91 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { ShadcnColors, ShadcnTypography, ShadcnSpacing, ShadcnBorderRadius, ShadcnShadows } from '../../theme/shadcn-inspired';
+import { theme } from '../../theme/shadcn-inspired';
 
 interface CardProps {
-  children: React.ReactNode;
   style?: ViewStyle;
-  variant?: 'default' | 'destructive' | 'accent';
+  children?: React.ReactNode;
 }
 
 interface CardHeaderProps {
-  children: React.ReactNode;
   style?: ViewStyle;
+  children?: React.ReactNode;
 }
 
 interface CardTitleProps {
-  children: React.ReactNode;
   style?: TextStyle;
+  children?: React.ReactNode;
 }
 
 interface CardDescriptionProps {
-  children: React.ReactNode;
   style?: TextStyle;
+  children?: React.ReactNode;
 }
 
 interface CardContentProps {
-  children: React.ReactNode;
   style?: ViewStyle;
+  children?: React.ReactNode;
 }
 
 interface CardFooterProps {
-  children: React.ReactNode;
   style?: ViewStyle;
+  children?: React.ReactNode;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, variant = 'default' }) => {
-  return (
-    <View style={[styles.card, styles[variant], style]}>
-      {children}
-    </View>
-  );
+export const Card: React.FC<CardProps> = ({ style, children }) => {
+  return <View style={[styles.card, style]}>{children}</View>;
 };
 
-export const CardHeader: React.FC<CardHeaderProps> = ({ children, style }) => {
-  return (
-    <View style={[styles.header, style]}>
-      {children}
-    </View>
-  );
+export const CardHeader: React.FC<CardHeaderProps> = ({ style, children }) => {
+  return <View style={[styles.header, style]}>{children}</View>;
 };
 
-export const CardTitle: React.FC<CardTitleProps> = ({ children, style }) => {
-  return (
-    <Text style={[styles.title, style]}>
-      {children}
-    </Text>
-  );
+export const CardTitle: React.FC<CardTitleProps> = ({ style, children }) => {
+  return <Text style={[styles.title, style]}>{children}</Text>;
 };
 
-export const CardDescription: React.FC<CardDescriptionProps> = ({ children, style }) => {
-  return (
-    <Text style={[styles.description, style]}>
-      {children}
-    </Text>
-  );
+export const CardDescription: React.FC<CardDescriptionProps> = ({ style, children }) => {
+  return <Text style={[styles.description, style]}>{children}</Text>;
 };
 
-export const CardContent: React.FC<CardContentProps> = ({ children, style }) => {
-  return (
-    <View style={[styles.content, style]}>
-      {children}
-    </View>
-  );
+export const CardContent: React.FC<CardContentProps> = ({ style, children }) => {
+  return <View style={[styles.content, style]}>{children}</View>;
 };
 
-export const CardFooter: React.FC<CardFooterProps> = ({ children, style }) => {
-  return (
-    <View style={[styles.footer, style]}>
-      {children}
-    </View>
-  );
+export const CardFooter: React.FC<CardFooterProps> = ({ style, children }) => {
+  return <View style={[styles.footer, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: ShadcnColors.background.card,
-    borderRadius: ShadcnBorderRadius.lg,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: ShadcnColors.border.primary,
-    ...ShadcnShadows.sm,
+    borderColor: theme.colors.border.primary,
+    ...theme.shadows.md,
   },
-  
-  // Variants
-  default: {
-    backgroundColor: ShadcnColors.background.card,
-    borderColor: ShadcnColors.border.primary,
-  },
-  destructive: {
-    backgroundColor: ShadcnColors.background.destructive,
-    borderColor: ShadcnColors.border.destructive,
-  },
-  accent: {
-    backgroundColor: ShadcnColors.background.accent,
-    borderColor: ShadcnColors.border.accent,
-  },
-  
   header: {
-    padding: ShadcnSpacing.lg,
-    paddingBottom: 0,
+    padding: theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.primary,
   },
-  
   title: {
-    fontSize: ShadcnTypography.fontSize.lg,
-    fontWeight: ShadcnTypography.fontWeight.semibold,
-    color: ShadcnColors.foreground.primary,
-    lineHeight: ShadcnTypography.lineHeight.tight * ShadcnTypography.fontSize.lg,
+    ...theme.typography.h3,
   },
-  
   description: {
-    fontSize: ShadcnTypography.fontSize.sm,
-    color: ShadcnColors.foreground.muted,
-    marginTop: ShadcnSpacing.xs,
-    lineHeight: ShadcnTypography.lineHeight.normal * ShadcnTypography.fontSize.sm,
+    ...theme.typography.body,
+    color: theme.colors.foreground.secondary,
+    marginTop: theme.spacing.sm,
   },
-  
   content: {
-    padding: ShadcnSpacing.lg,
+    padding: theme.spacing.lg,
   },
-  
   footer: {
-    padding: ShadcnSpacing.lg,
-    paddingTop: 0,
+    padding: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border.primary,
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
 });

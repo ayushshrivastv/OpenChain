@@ -1,109 +1,78 @@
-// Import polyfills first
-import './src/polyfills';
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-// Import screens
-import { theme } from './src/theme/shadcn-inspired';
-import HomeScreenShadcn from './src/screens/HomeScreenShadcn';
+// Screens
+import HomeScreen from './src/screens/HomeScreen';
 import LendingScreenShadcn from './src/screens/LendingScreenShadcn';
 import BorrowingScreen from './src/screens/BorrowingScreen';
-import PortfolioScreenShadcn from './src/screens/PortfolioScreenShadcn';
 import BonkRewardsScreen from './src/screens/BonkRewardsScreen';
 
-// Import Solana Mobile Wallet Provider
-import { SolanaWalletProvider } from './src/components/SolanaWalletProvider';
+// Theme
+import { theme } from './src/theme/shadcn-inspired';
+
+// Wallet Provider
+import SolanaWalletProvider from './src/components/SolanaWalletProvider';
 
 const Tab = createBottomTabNavigator();
 
-export default function App() {
+const App: React.FC = () => {
   return (
-    <SolanaWalletProvider>
-      <NavigationContainer>
-        <View style={styles.container}>
-          <StatusBar style="light" />
+    <SafeAreaProvider>
+      <SolanaWalletProvider>
+        <NavigationContainer>
           <Tab.Navigator
             screenOptions={({ route }) => ({
               tabBarIcon: ({ focused, color, size }) => {
-                let iconName: keyof typeof Ionicons.glyphMap;
+                let iconName;
 
                 if (route.name === 'Home') {
                   iconName = focused ? 'home' : 'home-outline';
-                } else if (route.name === 'Lending') {
+                } else if (route.name === 'Lend') {
+                  iconName = focused ? 'cash' : 'cash-outline';
+                } else if (route.name === 'Borrow') {
                   iconName = focused ? 'trending-up' : 'trending-up-outline';
-                } else if (route.name === 'Borrowing') {
-                  iconName = focused ? 'trending-down' : 'trending-down-outline';
-                } else if (route.name === 'Portfolio') {
-                  iconName = focused ? 'wallet' : 'wallet-outline';
                 } else if (route.name === 'BONK') {
-                  iconName = focused ? 'rocket' : 'rocket-outline';
-                } else {
-                  iconName = 'help-outline';
+                  iconName = focused ? 'bonfire' : 'bonfire-outline';
                 }
 
-                return <Ionicons name={iconName} size={size} color={color} />;
+                return <Icon name={iconName as string} size={size} color={color} />;
               },
-              tabBarActiveTintColor: theme.colors.foreground.primary,
-              tabBarInactiveTintColor: theme.colors.foreground.muted,
+              tabBarActiveTintColor: theme.colors.primary.DEFAULT,
+              tabBarInactiveTintColor: theme.colors.foreground.secondary,
               tabBarStyle: {
-                backgroundColor: theme.colors.background.card,
+                backgroundColor: theme.colors.background.primary,
                 borderTopColor: theme.colors.border.primary,
-                borderTopWidth: 1,
-                paddingBottom: 8,
-                paddingTop: 8,
-                height: 65,
+                paddingTop: theme.spacing.xs,
+                paddingBottom: theme.spacing.sm,
+                height: 60,
+              },
+              tabBarLabelStyle: {
+                fontSize: 12,
+                fontWeight: '600',
               },
               headerStyle: {
-                backgroundColor: theme.colors.background.card,
+                backgroundColor: theme.colors.background.primary,
                 borderBottomColor: theme.colors.border.primary,
                 borderBottomWidth: 1,
               },
-              headerTintColor: theme.colors.foreground.primary,
               headerTitleStyle: {
-                fontWeight: '600',
-                fontSize: 18,
+                color: theme.colors.foreground.primary,
+                fontWeight: 'bold',
               },
             })}
           >
-            <Tab.Screen
-              name="Home"
-              component={HomeScreenShadcn}
-              options={{ title: 'Home' }}
-            />
-            <Tab.Screen
-              name="Lending"
-              component={LendingScreenShadcn}
-              options={{ title: 'Lend' }}
-            />
-            <Tab.Screen 
-              name="Borrowing" 
-              component={BorrowingScreen} 
-              options={{ title: 'Borrow' }}
-            />
-            <Tab.Screen 
-              name="Portfolio" 
-              component={PortfolioScreenShadcn} 
-              options={{ title: 'Portfolio' }}
-            />
-            <Tab.Screen 
-              name="BONK" 
-              component={BonkRewardsScreen} 
-              options={{ title: 'BONK Rewards' }}
-            />
+            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Lend" component={LendingScreenShadcn} />
+            <Tab.Screen name="Borrow" component={BorrowingScreen} />
+            <Tab.Screen name="BONK" component={BonkRewardsScreen} />
           </Tab.Navigator>
-        </View>
-      </NavigationContainer>
-    </SolanaWalletProvider>
+        </NavigationContainer>
+      </SolanaWalletProvider>
+    </SafeAreaProvider>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000', // Pure black Shadcn/ui inspired background
-  },
-});
+export default App;

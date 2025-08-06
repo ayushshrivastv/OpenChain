@@ -1,25 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ScrollView,
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
-  Alert,
+  FlatList,
+  TextInput,
+  Image,
   TouchableOpacity,
+  Alert,
   ViewStyle,
+  StyleSheet,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useWallet } from '../components/SolanaWalletProvider';
-import { priceService, PriceData } from '../services/PriceService';
-import { contractService } from '../services/ContractService';
-import {
-  TOKEN_CONFIGS,
-  getTokensByNetwork,
-} from '../services/BackendConfig';
-import { PublicKey } from '@solana/web3.js';
-import { theme } from '../theme/shadcn-inspired';
-import { Button } from '../components/ui/Button';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+
+// UI Components
+import Button from '../../components/ui/Button';
 import {
   Card,
   CardHeader,
@@ -27,27 +23,14 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
+} from '../../components/ui/Card';
 
-interface Token {
-  symbol: string;
-  name: string;
-  balance: string;
-  apy: string;
-  icon: string;
-  price: string;
-}
+// Theme and Config
+import { theme } from '../../theme/shadcn-inspired';
+import { getTokens, getTokenPrices, PriceData, Token } from '../../services/BackendConfig';
 
-const getTokenIcon = (symbol: string): string => {
-  const icons: Record<string, string> = {
-    SOL: '◎',
-    USDC: '$',
-    ETH: 'Ξ',
-    MATIC: '◆',
-  };
-  return icons[symbol] || '●';
-};
+// API
+import { createDepositTx } from '../../services/api';
 
 const LendingScreenShadcn: React.FC = () => {
   const { connected, publicKey, signTransaction } = useWallet();
@@ -58,28 +41,14 @@ const LendingScreenShadcn: React.FC = () => {
   const [tokens, setTokens] = useState<Token[]>([]);
 
   const fetchTokenData = useCallback(async () => {
-    setLoading(true);
     try {
-      const priceData = await priceService.getAllTokenPrices();
-      setPrices(priceData);
-
-      const solanaTokens = getTokensByNetwork('solana');
-      const tokenData: Token[] = solanaTokens.map(token => ({
-        symbol: token.symbol,
-        name: token.name,
-        balance: '0.00',
-        apy: '5.2%', // Placeholder
-        icon: getTokenIcon(token.symbol),
-        price: priceData[token.symbol]
-          ? priceService.formatPrice(priceData[token.symbol].price)
-          : '$0.00',
-      }));
-      setTokens(tokenData);
+      const fetchedTokens = await getTokens();
+      setTokens(fetchedTokens);
+      const fetchedPrices = await getTokenPrices(fetchedTokens.map(t => t.coingeckoId));
+      setPrices(fetchedPrices);
     } catch (error) {
       console.error('Failed to fetch token data:', error);
-      Alert.alert('Error', 'Failed to fetch market data.');
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Failed to load token data. Please try again later.');
     }
   }, []);
 
@@ -88,72 +57,35 @@ const LendingScreenShadcn: React.FC = () => {
   }, [fetchTokenData]);
 
   const handleLend = async () => {
-    if (!connected || !publicKey) {
-      Alert.alert('Wallet Not Connected', 'Please connect your wallet first');
+    if (!connected || !publicKey || !signTransaction) {
+      Alert.alert('Wallet Not Connected', 'Please connect your wallet to continue.');
       return;
     }
 
     if (!selectedToken || !amount) {
-      Alert.alert('Invalid Input', 'Please select a token and enter an amount');
-      return;
-    }
-
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount');
+      Alert.alert('Invalid Input', 'Please select a token and enter an amount.');
       return;
     }
 
     setLoading(true);
-
     try {
-      const tokenConfig = TOKEN_CONFIGS.find(
-        t => t.symbol === selectedToken.symbol
-      );
-      if (!tokenConfig) {
-        throw new Error('Token configuration not found');
-      }
+      const amountInSmallestUnit = parseFloat(amount) * (10 ** selectedToken.decimals);
 
-      if (tokenConfig.network === 'solana') {
-        const tokenMint = new PublicKey(
-          tokenConfig.address === 'native'
-            ? 'So11111111111111111111111111111111111111112' // SOL mint
-            : tokenConfig.address
-        );
+      const base64Tx = await createDepositTx(publicKey.toBase58(), selectedToken.mint, amountInSmallestUnit);
+      const tx = Transaction.from(Buffer.from(base64Tx, 'base64'));
 
-        const amountLamports = amountNum * Math.pow(10, tokenConfig.decimals);
+      const connection = new Connection(process.env.EXPO_PUBLIC_SOLANA_RPC_URL!, 'confirmed');
+      const { blockhash } = await connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = publicKey;
 
-        const transaction = await contractService.prepareSolanaDepositTransaction(
-          publicKey,
-          tokenMint,
-          amountLamports
-        );
+      const signedTx = await signTransaction(tx);
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      await connection.confirmTransaction(signature, 'confirmed');
 
-        if (!transaction) {
-          throw new Error('Failed to prepare transaction');
-        }
-
-        const signedTransaction = await signTransaction(transaction);
-        // In a real app, we would send and confirm the transaction
-
-        Alert.alert(
-          'Lending Successful!',
-          `You have successfully lent ${amount} ${selectedToken.symbol}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setAmount('');
-                setSelectedToken(null);
-                fetchTokenData(); // Refresh data
-              },
-            },
-          ]
-        );
-      } else {
-        // Handle cross-chain logic
-        Alert.alert('Info', 'Cross-chain lending is not yet implemented.');
-      }
+      Alert.alert('Success', `Successfully lent ${amount} ${selectedToken.symbol}.`);
+      setAmount('');
+      setSelectedToken(null);
     } catch (error: any) {
       console.error('Lending failed:', error);
       Alert.alert('Lending Failed', error.message || 'An unknown error occurred.');
@@ -162,117 +94,78 @@ const LendingScreenShadcn: React.FC = () => {
     }
   };
 
-  const renderTokenCard = (item: Token) => (
-    <Card
-      key={item.symbol}
-      style={StyleSheet.flatten([
-        styles.tokenCard,
-        selectedToken?.symbol === item.symbol && styles.selectedTokenCard,
-      ])}
-    >
-        <TouchableOpacity onPress={() => setSelectedToken(item)} style={{ flex: 1 }}>
-          <CardHeader>
-            <View style={styles.cardHeaderContainer}>
-              <View style={styles.tokenInfo}>
-                <View style={styles.tokenIconContainer}>
-                  <Text style={styles.tokenIconText}>{item.icon}</Text>
-                </View>
-                <View>
-                  <CardTitle>{item.symbol}</CardTitle>
-                  <CardDescription>{item.name}</CardDescription>
-                </View>
-              </View>
-              <View style={styles.tokenStats}>
-                <Text style={styles.apyLabel}>APY</Text>
-                <Text style={styles.apyValue}>{item.apy}</Text>
-              </View>
-            </View>
-          </CardHeader>
-        <CardContent>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceLabel}>Price</Text>
-            <Text style={styles.priceValue}>{item.price}</Text>
+  const renderTokenCard = ({ item }: { item: Token }) => {
+    const isSelected = selectedToken?.mint === item.mint;
+    const price = prices[item.coingeckoId]?.usd?.toFixed(2) || 'N/A';
+
+    const cardStyle = StyleSheet.flatten([
+      styles.tokenCard,
+      isSelected && styles.selectedTokenCard,
+    ]);
+
+    return (
+      <TouchableOpacity onPress={() => setSelectedToken(item)} style={cardStyle}>
+        <View style={styles.tokenInfoContainer}>
+          <Image source={{ uri: item.logo }} style={styles.tokenLogo} />
+          <View>
+            <Text style={styles.tokenSymbol}>{item.symbol}</Text>
+            <Text style={styles.tokenName}>{item.name}</Text>
           </View>
-        </CardContent>
+        </View>
+        <View style={styles.tokenDetailsContainer}>
+          <Text style={styles.tokenPrice}>${price}</Text>
+          <Text style={styles.tokenApy}>{item.apy}% APY</Text>
+        </View>
       </TouchableOpacity>
-    </Card>
-  );
+    );
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lend Assets</Text>
-        <Text style={styles.headerSubtitle}>
-          Supply assets to the OpenChain protocol and earn interest.
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Available Markets</Text>
-        {loading && !tokens.length ? (
-          <ActivityIndicator
-            size="large"
-            color={theme.colors.foreground.primary}
+    <View style={styles.container}>
+      <Card style={styles.mainCard}>
+        <CardHeader>
+          <CardTitle>Lend Your Assets</CardTitle>
+          <CardDescription>Select a token and enter an amount to start earning interest.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Text style={styles.label}>Select a Token</Text>
+          <FlatList
+            data={tokens}
+            renderItem={renderTokenCard}
+            keyExtractor={(item) => item.mint}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tokenList}
           />
-        ) : (
-          <View style={styles.tokenList}>{tokens.map(renderTokenCard)}</View>
-        )}
-      </View>
 
-      {selectedToken && (
-        <Card style={styles.lendingCard}>
-          <CardHeader>
-            <CardTitle>Lend {selectedToken.symbol}</CardTitle>
-            <CardDescription>
-              Enter the amount you want to supply.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Input
-              label={`Amount in ${selectedToken.symbol}`}
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0.00"
-              keyboardType="numeric"
-            />
-            <Text style={styles.balanceText}>
-              Wallet Balance: {selectedToken.balance} {selectedToken.symbol}
-            </Text>
-          </CardContent>
-          <CardFooter>
-                        <Button
-              title={`Supply ${selectedToken.symbol}`}
-              onPress={handleLend}
-              disabled={loading || !amount}
-              loading={loading}
-            />
-          </CardFooter>
-        </Card>
-      )}
-
-      {!connected && (
-        <Card style={styles.warningCard}>
-          <CardHeader>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={24}
-                color={theme.colors.foreground.destructive}
-                style={{ marginRight: theme.spacing.sm }}
-              />
-              <CardTitle>Wallet Not Connected</CardTitle>
+          {selectedToken && (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Amount to Lend</Text>
+              <View style={styles.amountInputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder={`0.00 ${selectedToken.symbol}`}
+                  placeholderTextColor={theme.colors.foreground.tertiary}
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="numeric"
+                />
+                <Image source={{ uri: selectedToken.logo }} style={styles.inputTokenLogo} />
+              </View>
             </View>
-          </CardHeader>
-          <CardContent>
-            <Text style={styles.warningText}>
-              Please connect your wallet to lend assets.
-            </Text>
-          </CardContent>
-        </Card>
-      )}
-    </ScrollView>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button
+            title={connected ? 'Lend Now' : 'Connect Wallet'}
+            onPress={connected ? handleLend : () => Alert.alert('Connect Wallet', 'Please connect your wallet from the Home screen.')}
+            loading={loading}
+            disabled={!connected || loading || !selectedToken || !amount}
+            style={styles.lendButton}
+          />
+        </CardFooter>
+      </Card>
+    </View>
   );
 };
 
@@ -280,107 +173,92 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.primary,
-  },
-  contentContainer: {
     padding: theme.spacing.md,
   },
-  header: {
-    marginBottom: theme.spacing.lg,
+  mainCard: {
+    flex: 1,
   },
-  headerTitle: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.typography.fontWeight.bold as any,
-    color: theme.colors.foreground.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  headerSubtitle: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.foreground.muted,
-  },
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.semibold as any,
-    color: theme.colors.foreground.primary,
-    marginBottom: theme.spacing.md,
+  label: {
+    ...theme.typography.small,
+    color: theme.colors.foreground.secondary,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   tokenList: {
-    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   tokenCard: {
-    // Uses default Card styling
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginRight: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.secondary,
+    width: 180,
+    justifyContent: 'space-between',
   },
   selectedTokenCard: {
-    borderColor: theme.colors.border.primary,
+    borderColor: theme.colors.primary.DEFAULT,
     borderWidth: 2,
   },
-  cardHeaderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
-  tokenInfo: {
+  tokenInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
-  tokenIconContainer: {
+  tokenLogo: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background.muted,
-    justifyContent: 'center',
+    marginRight: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+  },
+  tokenSymbol: {
+    ...theme.typography.h4,
+    color: theme.colors.foreground.primary,
+  },
+  tokenName: {
+    ...theme.typography.small,
+    color: theme.colors.foreground.secondary,
+  },
+  tokenDetailsContainer: {
+    alignItems: 'flex-start',
+  },
+  tokenPrice: {
+    ...theme.typography.body,
+    fontWeight: '600',
+    color: theme.colors.foreground.primary,
+  },
+  tokenApy: {
+    ...theme.typography.small,
+    color: theme.colors.success.DEFAULT,
+    marginTop: theme.spacing.xs,
+  },
+  inputContainer: {
+    marginTop: theme.spacing.lg,
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
-  tokenIconText: {
+  input: {
+    flex: 1,
+    ...theme.typography.body,
+    color: theme.colors.foreground.primary,
+    padding: theme.spacing.md,
     fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.foreground.primary,
   },
-  tokenStats: {
-    alignItems: 'flex-end',
+  inputTokenLogo: {
+    width: 24,
+    height: 24,
+    marginRight: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
   },
-  apyLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.foreground.muted,
-  },
-  apyValue: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: 'bold',
-    color: theme.colors.foreground.primary,
-  },
-  priceContainer: {
-    marginTop: theme.spacing.sm,
-    alignItems: 'flex-end',
-  },
-  priceLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.foreground.muted,
-  },
-  priceValue: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.foreground.primary,
-  },
-  lendingCard: {
-    marginTop: theme.spacing.lg,
-  },
-  balanceText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.foreground.muted,
-    textAlign: 'right',
-    marginTop: theme.spacing.sm,
-  },
-  warningCard: {
-    marginTop: theme.spacing.lg,
-    borderColor: theme.colors.border.destructive,
-    borderLeftWidth: 4,
-  },
-  warningText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.foreground.destructive,
+  lendButton: {
+    flex: 1,
   },
 });
 

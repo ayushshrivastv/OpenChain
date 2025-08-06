@@ -1,58 +1,121 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
-import { ShadcnColors, ShadcnTypography, ShadcnSpacing, ShadcnBorderRadius } from '../../theme/shadcn-inspired';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
+import { theme } from '../../theme/shadcn-inspired';
+
+const buttonVariants = {
+  default: {
+    backgroundColor: theme.colors.primary.DEFAULT,
+    textColor: theme.colors.primary.foreground,
+  },
+  destructive: {
+    backgroundColor: theme.colors.destructive.DEFAULT,
+    textColor: theme.colors.destructive.foreground,
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    textColor: theme.colors.foreground.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  secondary: {
+    backgroundColor: theme.colors.secondary.DEFAULT,
+    textColor: theme.colors.secondary.foreground,
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    textColor: theme.colors.foreground.primary,
+  },
+  link: {
+    backgroundColor: 'transparent',
+    textColor: theme.colors.primary.DEFAULT,
+  },
+};
+
+const buttonSizes = {
+  default: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+  },
+  sm: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.sm,
+  },
+  lg: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+  },
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+};
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
+  variant?: keyof typeof buttonVariants;
+  size?: keyof typeof buttonSizes;
   loading?: boolean;
+  disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
-  variant = 'primary',
-  size = 'md',
-  disabled = false,
+  variant = 'default',
+  size = 'default',
   loading = false,
+  disabled = false,
   style,
   textStyle,
 }) => {
-  const buttonStyle = [
-    styles.base,
-    styles[variant],
-    styles[`${size}Size`],
-    disabled && styles.disabled,
-    style,
-  ];
+  const variantStyles = buttonVariants[variant];
+  const sizeStyles = buttonSizes[size];
 
-  const textStyleCombined = [
-    styles.text,
-    styles[`${variant}Text`],
-    styles[`${size}Text`],
-    disabled && styles.disabledText,
+  const buttonStyle = StyleSheet.flatten([
+    styles.base,
+    { 
+      backgroundColor: variantStyles.backgroundColor,
+      borderColor: variantStyles.borderColor,
+      borderWidth: variantStyles.borderWidth,
+    },
+    sizeStyles,
+    (disabled || loading) && styles.disabled,
+    style,
+  ]);
+
+  const titleStyle = StyleSheet.flatten([
+    theme.typography.button,
+    { color: variantStyles.textColor },
     textStyle,
-  ];
+  ]);
 
   return (
     <TouchableOpacity
-      style={buttonStyle}
       onPress={onPress}
+      style={buttonStyle}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator 
-          color={variant === 'primary' ? ShadcnColors.button.primary.foreground : ShadcnColors.foreground.primary} 
-          size="small" 
-        />
+        <ActivityIndicator color={variantStyles.textColor} />
       ) : (
-        <Text style={textStyleCombined}>{title}</Text>
+        <Text style={titleStyle}>{title}</Text>
       )}
     </TouchableOpacity>
   );
@@ -60,93 +123,13 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: ShadcnBorderRadius.md,
-    borderWidth: 1,
+    alignItems: 'center',
+    flexDirection: 'row',
   },
-  
-  // Variants
-  primary: {
-    backgroundColor: ShadcnColors.button.primary.background,
-    borderColor: ShadcnColors.button.primary.background,
-  },
-  secondary: {
-    backgroundColor: ShadcnColors.button.secondary.background,
-    borderColor: ShadcnColors.button.secondary.background,
-  },
-  destructive: {
-    backgroundColor: ShadcnColors.button.destructive.background,
-    borderColor: ShadcnColors.button.destructive.background,
-  },
-  outline: {
-    backgroundColor: ShadcnColors.button.outline.background,
-    borderColor: ShadcnColors.button.outline.border,
-  },
-  ghost: {
-    backgroundColor: ShadcnColors.button.ghost.background,
-    borderColor: 'transparent',
-  },
-  
-  // Sizes
-  smSize: {
-    paddingHorizontal: ShadcnSpacing.sm,
-    paddingVertical: ShadcnSpacing.xs,
-    minHeight: 32,
-  },
-  mdSize: {
-    paddingHorizontal: ShadcnSpacing.md,
-    paddingVertical: ShadcnSpacing.sm,
-    minHeight: 40,
-  },
-  lgSize: {
-    paddingHorizontal: ShadcnSpacing.lg,
-    paddingVertical: ShadcnSpacing.md,
-    minHeight: 48,
-  },
-  
-  // Text styles
-  text: {
-    fontWeight: ShadcnTypography.fontWeight.medium,
-    textAlign: 'center',
-  },
-  primaryText: {
-    color: ShadcnColors.button.primary.foreground,
-    fontSize: ShadcnTypography.fontSize.sm,
-  },
-  secondaryText: {
-    color: ShadcnColors.button.secondary.foreground,
-    fontSize: ShadcnTypography.fontSize.sm,
-  },
-  destructiveText: {
-    color: ShadcnColors.button.destructive.foreground,
-    fontSize: ShadcnTypography.fontSize.sm,
-  },
-  outlineText: {
-    color: ShadcnColors.button.outline.foreground,
-    fontSize: ShadcnTypography.fontSize.sm,
-  },
-  ghostText: {
-    color: ShadcnColors.button.ghost.foreground,
-    fontSize: ShadcnTypography.fontSize.sm,
-  },
-  
-  // Text sizes
-  smText: {
-    fontSize: ShadcnTypography.fontSize.xs,
-  },
-  mdText: {
-    fontSize: ShadcnTypography.fontSize.sm,
-  },
-  lgText: {
-    fontSize: ShadcnTypography.fontSize.base,
-  },
-  
-  // Disabled states
   disabled: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
 });
+
+export default Button;
