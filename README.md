@@ -6,6 +6,7 @@
 [![Chainlink](https://img.shields.io/badge/Chainlink-CCIP-blue)](https://chain.link/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Anchor](https://img.shields.io/badge/Anchor-0.31.1-purple)](https://www.anchor-lang.com/)
+[![Solana Mobile](https://img.shields.io/badge/Solana%20Mobile-Stack-green)](https://solanamobile.com/)
 
 ## Cross Chain Lending & Borrowing Protocol
 
