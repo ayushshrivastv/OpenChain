@@ -21,7 +21,7 @@ For a detailed technical understanding of Chainlink Components, please refer to 
 
 OpenChain is still not perfect. I’ve written extensively on the backend side—covering smart contracts, Chainlink security, Chainlink CCIP, Chainlink Automation, Chainlink VRF, and much more. However, I wasn’t able to fully integrate it on the frontend side. Not being a frontend engineer made this even more challenging, as working on the frontend and navigating documentation was unfamiliar territory.
 
-<img width="700" height="700" alt="Screenshot 2025-08-05 at 8 23 28 AM" src="https://github.com/user-attachments/assets/ea2140b9-406a-444c-9e2b-e28a114efaa2" />
+<img width="700" height="700" alt="Screenshot 2025-08-07 at 5 43 14 AM" src="https://github.com/user-attachments/assets/2ea3bd51-bb71-4a0c-973a-66542d1fdaa7" />
 
 ### Your Portal to Crosschain Liquidity. Lend, borrow, and manage assets anywhere.
 
